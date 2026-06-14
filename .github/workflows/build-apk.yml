@@ -68,3 +68,16 @@ jobs:
         with:
           name: WalletPro-APK
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Rename APK
+        if: success()
+        run: cp build/app/outputs/flutter-apk/app-release.apk WalletPro.apk
+
+      - name: Publish APK as a Release (easy phone download)
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Wallet Pro (latest build)
+          body: Tap WalletPro.apk below to install on your Android phone.
+          files: WalletPro.apk
