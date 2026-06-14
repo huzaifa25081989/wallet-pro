@@ -8,6 +8,15 @@ import 'txn_edit.dart';
 
 const accountTypes = ['Bank', 'Cash', 'Savings', 'Investment', 'Credit', 'Person', 'Wallet'];
 
+/// Account groups shown as separate sections on the Home screen.
+const accountGroups = ['main', 'people', 'investment'];
+const groupLabels = {
+  'main': 'Main Accounts',
+  'people': 'Lenders & Borrowers',
+  'investment': 'Investments',
+};
+String groupOf(Map<String, Object?> a) => (a['grp'] as String?) ?? 'main';
+
 /// Full account list (opened from More tab).
 class AccountsScreen extends StatefulWidget {
   const AccountsScreen({super.key});
@@ -83,6 +92,7 @@ class _AccountEditState extends State<AccountEdit> {
   final nameCtl = TextEditingController();
   final openCtl = TextEditingController(text: '0');
   String type = 'Bank';
+  String grp = 'main';
   int icon = Icons.account_balance.codePoint;
   int color = Colors.teal.value;
 
@@ -94,6 +104,7 @@ class _AccountEditState extends State<AccountEdit> {
       nameCtl.text = a['name'] as String? ?? '';
       openCtl.text = '${(a['opening'] as num?) ?? 0}';
       type = a['type'] as String? ?? 'Bank';
+      grp = a['grp'] as String? ?? 'main';
       icon = (a['icon'] as int?) ?? icon;
       color = (a['color'] as int?) ?? color;
     }
@@ -110,6 +121,7 @@ class _AccountEditState extends State<AccountEdit> {
       'icon': icon,
       'color': color,
       'opening': double.tryParse(openCtl.text.replaceAll(',', '')) ?? 0,
+      'grp': grp,
     };
     if (widget.account == null) {
       await DB.insert('accounts', m);
@@ -155,6 +167,17 @@ class _AccountEditState extends State<AccountEdit> {
                 for (final t in accountTypes) DropdownMenuItem(value: t, child: Text(t)),
               ],
               onChanged: (v) => setState(() => type = v ?? 'Bank'),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: grp,
+              decoration: const InputDecoration(
+                  labelText: 'Show under', border: OutlineInputBorder()),
+              items: [
+                for (final g in accountGroups)
+                  DropdownMenuItem(value: g, child: Text(groupLabels[g]!)),
+              ],
+              onChanged: (v) => setState(() => grp = v ?? 'main'),
             ),
             const SizedBox(height: 12),
             TextField(

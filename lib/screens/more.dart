@@ -17,6 +17,7 @@ import '../db.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'appearance.dart';
+import 'drive_help.dart';
 import 'accounts.dart';
 import 'categories.dart';
 import 'coa.dart';
@@ -246,10 +247,7 @@ class _MoreScreenState extends State<MoreScreen> {
       await prefs.setInt('lastBackup', DateTime.now().millisecondsSinceEpoch);
       if (mounted) snack(context, 'Backed up to Google Drive \u2714');
     } catch (e) {
-      if (mounted) {
-        snack(context,
-            'Drive backup failed \u2014 check the Google Drive setup steps in the README');
-      }
+      if (mounted) _showDriveError('backup', e.toString());
     }
   }
 
@@ -278,11 +276,39 @@ class _MoreScreenState extends State<MoreScreen> {
       await DB.restore(jsonDecode(utf8.decode(bytes)) as Map);
       if (mounted) snack(context, 'Restored from Google Drive \u2714');
     } catch (e) {
-      if (mounted) {
-        snack(context,
-            'Drive restore failed \u2014 check the Google Drive setup steps in the README');
-      }
+      if (mounted) _showDriveError('restore', e.toString());
     }
+  }
+
+  void _showDriveError(String action, String err) {
+    final dev = err.contains('10:') || err.toLowerCase().contains('developer');
+    showDialog(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text('Drive $action failed'),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (dev)
+              const Text(
+                  'This is the common Android OAuth error (code 10). It means this app\'s package + signing fingerprint are not yet registered in your Google Cloud project. The setup steps fix it.',
+                  style: TextStyle(fontSize: 13)),
+            const SizedBox(height: 8),
+            const Text('Technical detail:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            SelectableText(err, style: const TextStyle(fontSize: 11)),
+          ]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(c);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const DriveHelpScreen()));
+            },
+            child: const Text('Setup help'),
+          ),
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Close')),
+        ],
+      ),
+    );
   }
 
   Future<void> _toggleAuto(bool v) async {
@@ -378,6 +404,14 @@ class _MoreScreenState extends State<MoreScreen> {
             subtitle: const Text('Backs up to Drive when you open the app'),
             value: autoBackup,
             onChanged: _toggleAuto,
+          ),
+          ListTile(
+            leading: const Icon(Icons.help_outline),
+            title: const Text('Google Drive setup help'),
+            subtitle: const Text('Fix sign-in / backup errors'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const DriveHelpScreen())),
           ),
           const Divider(),
           const _Header('App'),

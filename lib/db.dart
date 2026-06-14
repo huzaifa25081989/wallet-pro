@@ -16,12 +16,12 @@ class DB {
 
   static Future<Database> _open() async {
     final path = p.join(await getDatabasesPath(), 'wallet_pro.db');
-    return openDatabase(path, version: 2, onCreate: _create, onUpgrade: _upgrade);
+    return openDatabase(path, version: 3, onCreate: _create, onUpgrade: _upgrade);
   }
 
   static Future<void> _create(Database d, int v) async {
     await d.execute(
-        'CREATE TABLE accounts(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, opening REAL DEFAULT 0, archived INTEGER DEFAULT 0, phone TEXT)');
+        'CREATE TABLE accounts(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, opening REAL DEFAULT 0, archived INTEGER DEFAULT 0, phone TEXT, grp TEXT DEFAULT 'main')');
     await d.execute(
         'CREATE TABLE cats(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, archived INTEGER DEFAULT 0)');
     await d.execute(
@@ -61,6 +61,15 @@ class DB {
         } catch (_) {}
       }
       await _createV2(d);
+    }
+    if (from < 3) {
+      try {
+        await d.execute("ALTER TABLE accounts ADD COLUMN grp TEXT DEFAULT 'main'");
+      } catch (_) {}
+      try {
+        await d.execute(
+            "UPDATE accounts SET grp = CASE WHEN type='Investment' THEN 'investment' WHEN type='Person' THEN 'people' ELSE 'main' END");
+      } catch (_) {}
     }
   }
 

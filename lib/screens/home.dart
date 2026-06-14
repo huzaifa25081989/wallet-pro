@@ -130,42 +130,85 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Accounts', style: Theme.of(context).textTheme.titleMedium),
-                  Text('${accounts.length}',
-                      style: TextStyle(color: cs.outline, fontWeight: FontWeight.w600)),
-                ],
-              ),
-            ),
-            for (final a in accounts)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Card(
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Color((a['color'] as int?) ?? cs.primary.value),
-                      child: Icon(iconOf(a['icon']), color: Colors.white),
-                    ),
-                    title: Text(a['name'] as String? ?? '',
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(a['type'] as String? ?? ''),
-                    trailing: Text(
-                      money(bals[a['id']] ?? 0),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: (bals[a['id']] ?? 0) < 0 ? Colors.red : null,
-                      ),
-                    ),
-                    onTap: () => _open(AccountDetail(account: a)),
-                  ),
-                ),
-              ),
+            ..._groupSections(context),
             const SizedBox(height: 100),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _groupSections(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final widgets = <Widget>[];
+    for (final g in accountGroups) {
+      final list = accounts.where((a) => groupOf(a) == g).toList();
+      if (list.isEmpty) continue;
+      final total = list.fold<double>(0, (s, a) => s + (bals[a['id']] ?? 0));
+      widgets.add(Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(groupLabels[g]!,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            Text(money(total),
+                style: TextStyle(color: cs.outline, fontWeight: FontWeight.w600, fontSize: 13)),
+          ],
+        ),
+      ));
+      widgets.add(Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [for (final a in list) _accountTile(context, a)],
+        ),
+      ));
+    }
+    return widgets;
+  }
+
+  Widget _accountTile(BuildContext context, Map<String, Object?> a) {
+    final w = (MediaQuery.of(context).size.width - 20 - 16) / 2; // 2 columns
+    final bal = bals[a['id']] ?? 0;
+    final color = Color((a['color'] as int?) ?? Colors.teal.value);
+    final neg = bal < 0;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => _open(AccountDetail(account: a)),
+      child: Container(
+        width: w,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [color, Color.lerp(color, Colors.black, 0.18)!],
+          ),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(iconOf(a['icon']), color: Colors.white70, size: 16),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(a['name'] as String? ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white, fontSize: 13)),
+              ),
+            ]),
+            const SizedBox(height: 8),
+            Text('${neg ? '-' : ''}$kCur ${fmt(bal.abs())}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: neg ? const Color(0xFFFFD2D2) : Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16)),
           ],
         ),
       ),
