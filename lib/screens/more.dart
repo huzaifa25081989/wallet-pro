@@ -10,6 +10,8 @@ import 'package:googleapis/drive/v3.dart' as gd;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../db.dart';
 import '../theme.dart';
@@ -74,11 +76,27 @@ class MoreScreen extends StatefulWidget {
 class _MoreScreenState extends State<MoreScreen> {
   bool autoBackup = false;
   bool busy = false;
+  String _version = '';
 
   @override
   void initState() {
     super.initState();
     _loadPrefs();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (mounted) setState(() => _version = '${info.version} (${info.buildNumber})');
+    } catch (_) {}
+  }
+
+  Future<void> _checkUpdate() async {
+    final uri = Uri.parse('https://github.com/huzaifa25081989/wallet-pro/releases/latest');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) snack(context, 'Could not open the releases page');
+    }
   }
 
   Future<void> _loadPrefs() async {
@@ -362,11 +380,19 @@ class _MoreScreenState extends State<MoreScreen> {
             onChanged: _toggleAuto,
           ),
           const Divider(),
+          const _Header('App'),
+          ListTile(
+            leading: const Icon(Icons.system_update_outlined),
+            title: const Text('Check for updates'),
+            subtitle: Text(_version.isEmpty ? 'Wallet Pro' : 'Installed: v$_version'),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: _checkUpdate,
+          ),
           const ListTile(
             leading: Icon(Icons.info_outline),
-            title: Text('Wallet Pro 1.0'),
+            title: Text('Wallet Pro'),
             subtitle: Text(
-                'Your data lives only on this phone (and in your own Google Drive backups). 100% free, no ads, no subscriptions.'),
+                'Your data lives only on this phone (and your own Google Drive backups). No ads, no subscriptions.'),
           ),
           const SizedBox(height: 24),
         ],

@@ -8,7 +8,13 @@ class TxnEdit extends StatefulWidget {
   final Map<String, Object?>? txn;
   final bool autoVoice;
   final String? initialType;
-  const TxnEdit({super.key, this.txn, this.autoVoice = false, this.initialType});
+  final int? initialCategoryId;
+  const TxnEdit(
+      {super.key,
+      this.txn,
+      this.autoVoice = false,
+      this.initialType,
+      this.initialCategoryId});
   @override
   State<TxnEdit> createState() => _TxnEditState();
 }
@@ -27,6 +33,7 @@ class _TxnEditState extends State<TxnEdit> {
   void initState() {
     super.initState();
     if (widget.initialType != null) type = widget.initialType!;
+    if (widget.initialCategoryId != null) categoryId = widget.initialCategoryId;
     _load().then((_) {
       if (widget.autoVoice && mounted) _voice();
     });

@@ -82,11 +82,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const Text('Total balance',
                           style: TextStyle(color: Colors.white70, fontSize: 14)),
-                      const Text('Wallet Pro',
-                          style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600)),
+                      InkWell(
+                        onTap: () => showSearch(
+                            context: context,
+                            delegate: WalletSearch(accounts, bals)),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(Icons.search, color: Colors.white, size: 20),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -201,4 +210,92 @@ class _HomeScreenState extends State<HomeScreen> {
           ]),
         ),
       );
+}
+
+/// Search across accounts and categories from the home screen.
+class WalletSearch extends SearchDelegate {
+  final List<Map<String, Object?>> accounts;
+  final Map<int, double> bals;
+  WalletSearch(this.accounts, this.bals);
+
+  @override
+  List<Widget> buildActions(BuildContext context) =>
+      [if (query.isNotEmpty) IconButton(icon: const Icon(Icons.clear), onPressed: () => query = '')];
+
+  @override
+  Widget buildLeading(BuildContext context) =>
+      IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => close(context, null));
+
+  @override
+  Widget buildResults(BuildContext context) => _results(context);
+
+  @override
+  Widget buildSuggestions(BuildContext context) => _results(context);
+
+  Widget _results(BuildContext context) {
+    final q = query.trim().toLowerCase();
+    final accs = accounts
+        .where((a) => (a['name'] as String? ?? '').toLowerCase().contains(q))
+        .toList();
+    return FutureBuilder<List<Map<String, Object?>>>(
+      future: DB.categories(),
+      builder: (context, snap) {
+        final cats = (snap.data ?? [])
+            .where((c) => (c['name'] as String? ?? '').toLowerCase().contains(q))
+            .toList();
+        return ListView(children: [
+          if (accs.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text('Accounts', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          for (final a in accs)
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Color((a['color'] as int?) ?? Colors.teal.value),
+                child: Icon(iconOf(a['icon']), color: Colors.white, size: 20),
+              ),
+              title: Text(a['name'] as String? ?? ''),
+              subtitle: Text(a['type'] as String? ?? ''),
+              trailing: Text(money(bals[a['id']] ?? 0),
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              onTap: () {
+                close(context, null);
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => AccountDetail(account: a)));
+              },
+            ),
+          if (cats.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text('Categories (tap to add a record)',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          for (final c in cats)
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Color((c['color'] as int?) ?? Colors.grey.value),
+                child: Icon(iconOf(c['icon']), color: Colors.white, size: 20),
+              ),
+              title: Text(c['name'] as String? ?? ''),
+              subtitle: Text(c['type'] as String? ?? ''),
+              onTap: () {
+                close(context, null);
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => TxnEdit(
+                            initialType: c['type'] as String?,
+                            initialCategoryId: c['id'] as int?)));
+              },
+            ),
+          if (accs.isEmpty && cats.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(32),
+              child: Center(child: Text('No matches')),
+            ),
+        ]);
+      },
+    );
+  }
 }

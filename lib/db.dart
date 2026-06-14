@@ -314,6 +314,109 @@ class DB {
     return posted;
   }
 
+  /// Bank-statement style data for [accountId] (or whole book if null),
+  /// for the date range [fromIso, toIso). Returns opening, dated rows
+  /// (date, desc, dr=outflow, cr=inflow, bal=running), closing and totals.
+  static Future<Map<String, Object?>> statement(
+      int? accountId, String fromIso, String toIso) async {
+    final d = await db;
+    double opening = 0;
+    List<Map<String, Object?>> raw;
+    if (accountId != null) {
+      final acc = await d.query('accounts', where: 'id=?', whereArgs: [accountId]);
+      opening = acc.isEmpty ? 0 : ((acc.first['opening'] as num?) ?? 0).toDouble();
+      // opening = account opening + net effect of everything before fromIso
+      final before = await d.rawQuery('''
+        SELECT t.* FROM txns t
+        WHERE (t.accountId=? OR t.toAccountId=?) AND t.date < ?''',
+          [accountId, accountId, fromIso]);
+      for (final r in before) {
+        opening += _delta(r, accountId);
+      }
+      raw = await d.rawQuery('''
+        SELECT t.*, c.name catName, af.name fromName, at.name toName
+        FROM txns t
+        LEFT JOIN cats c ON c.id=t.categoryId
+        LEFT JOIN accounts af ON af.id=t.accountId
+        LEFT JOIN accounts at ON at.id=t.toAccountId
+        WHERE (t.accountId=? OR t.toAccountId=?) AND t.date>=? AND t.date<?
+        ORDER BY t.date ASC, t.id ASC''',
+          [accountId, accountId, fromIso, toIso]);
+    } else {
+      // whole book: opening = sum of account openings + net income/expense before from
+      final accs = await d.query('accounts');
+      for (final a in accs) opening += ((a['opening'] as num?) ?? 0).toDouble();
+      final before = await d.rawQuery(
+          "SELECT type, SUM(amount) s FROM txns WHERE date<? AND type IN ('income','expense') GROUP BY type",
+          [fromIso]);
+      for (final r in before) {
+        final s = ((r['s'] as num?) ?? 0).toDouble();
+        opening += r['type'] == 'income' ? s : -s;
+      }
+      raw = await d.rawQuery('''
+        SELECT t.*, c.name catName, af.name fromName, at.name toName
+        FROM txns t
+        LEFT JOIN cats c ON c.id=t.categoryId
+        LEFT JOIN accounts af ON af.id=t.accountId
+        LEFT JOIN accounts at ON at.id=t.toAccountId
+        WHERE t.date>=? AND t.date<? AND t.type IN ('income','expense')
+        ORDER BY t.date ASC, t.id ASC''', [fromIso, toIso]);
+    }
+
+    double running = opening, totalDr = 0, totalCr = 0;
+    final rows = <Map<String, Object?>>[];
+    for (final r in raw) {
+      final delta = accountId != null ? _delta(r, accountId) : _bookDelta(r);
+      final desc = _describe(r, accountId);
+      final cr = delta > 0 ? delta : 0.0;
+      final dr = delta < 0 ? -delta : 0.0;
+      running += delta;
+      totalCr += cr;
+      totalDr += dr;
+      rows.add({'date': r['date'], 'desc': desc, 'dr': dr, 'cr': cr, 'bal': running});
+    }
+    return {
+      'opening': opening,
+      'rows': rows,
+      'closing': running,
+      'totalDr': totalDr,
+      'totalCr': totalCr,
+    };
+  }
+
+  static double _delta(Map<String, Object?> r, int accountId) {
+    final amt = ((r['amount'] as num?) ?? 0).toDouble();
+    switch (r['type']) {
+      case 'income':
+        return amt;
+      case 'expense':
+        return -amt;
+      default: // transfer
+        if ((r['accountId'] as int?) == accountId) return -amt;
+        if ((r['toAccountId'] as int?) == accountId) return amt;
+        return 0;
+    }
+  }
+
+  static double _bookDelta(Map<String, Object?> r) {
+    final amt = ((r['amount'] as num?) ?? 0).toDouble();
+    return r['type'] == 'income' ? amt : -amt;
+  }
+
+  static String _describe(Map<String, Object?> r, int? accountId) {
+    final note = (r['note'] as String?)?.trim() ?? '';
+    switch (r['type']) {
+      case 'transfer':
+        final base = accountId != null && (r['accountId'] as int?) == accountId
+            ? 'Transfer to ${r['toName'] ?? ''}'
+            : 'Transfer from ${r['fromName'] ?? ''}';
+        return note.isEmpty ? base : '$base - $note';
+      default:
+        final cat = r['catName'] as String? ?? (r['type'] as String? ?? '');
+        return note.isEmpty ? cat : '$cat - $note';
+    }
+  }
+
   // ---------- get-or-create (used by CSV import) ----------
   static Future<int> accountByName(String name) async {
     final d = await db;

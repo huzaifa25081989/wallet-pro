@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../db.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'statement.dart';
 import 'txn_edit.dart';
 
 const accountTypes = ['Bank', 'Cash', 'Savings', 'Investment', 'Credit', 'Person', 'Wallet'];
@@ -263,6 +264,11 @@ class _AccountDetailState extends State<AccountDetail> {
       appBar: AppBar(
         title: Text(widget.account['name'] as String? ?? 'Account'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.description_outlined),
+            tooltip: 'Statement',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => StatementScreen(accountId: widget.account['id'] as int))),
+          ),
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             onPressed: () => Navigator.push(context,

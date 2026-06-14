@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../db.dart';
+import 'statement.dart';
 import '../widgets.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -98,7 +99,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         accounts.fold<double>(0, (s, a) => s + (bals[a['id']] ?? 0));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Reports')),
+      appBar: AppBar(title: const Text('Reports'), actions: [IconButton(tooltip: 'Statement & Export', icon: const Icon(Icons.description_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StatementScreen())))]),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
