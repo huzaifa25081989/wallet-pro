@@ -2,13 +2,9 @@
 Analyzing wallet-pro...                                         
 
 warning • The include file 'package:flutter_lints/flutter.yaml' in '/home/runner/work/wallet-pro/wallet-pro/analysis_options.yaml' can't be found when analyzing '/home/runner/work/wallet-pro/wallet-pro' • analysis_options.yaml:10:10 • include_file_not_found
-  error • Expected to find ',' • lib/db.dart:24:203 • expected_token
-  error • Undefined name 'main' • lib/db.dart:24:203 • undefined_identifier
-  error • Expected to find ',' • lib/db.dart:24:207 • expected_token
-  error • Too many positional arguments: 2 expected, but 3 found • lib/db.dart:24:207 • extra_positional_arguments
 warning • The '!' will have no effect because the receiver can't be null • lib/db.dart:319:52 • unnecessary_non_null_assertion
 
-6 issues found. (ran in 18.9s)
+2 issues found. (ran in 18.9s)
 ===== flutter build apk =====
 
 Running Gradle task 'assembleRelease'...                        
@@ -26,34 +22,6 @@ Preparing "Install Android SDK Platform 33 (revision 3)".
 Installing Android SDK Platform 33 in /usr/local/lib/android/sdk/platforms/android-33
 "Install Android SDK Platform 33 (revision 3)" complete.
 "Install Android SDK Platform 33 (revision 3)" finished.
-lib/db.dart:24:203: Error: Expected ',' before this.
-        'CREATE TABLE accounts(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, opening REAL DEFAULT 0, archived INTEGER DEFAULT 0, phone TEXT, grp TEXT DEFAULT 'main')');
-                                                                                          ^^^^
-lib/db.dart:24:207: Error: Expected ',' before this.
-        'CREATE TABLE accounts(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, opening REAL DEFAULT 0, archived INTEGER DEFAULT 0, phone TEXT, grp TEXT DEFAULT 'main')');
-                                                                                          ^^^
-lib/db.dart:24:203: Error: Undefined name 'main'.
-        'CREATE TABLE accounts(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, opening REAL DEFAULT 0, archived INTEGER DEFAULT 0, phone TEXT, grp TEXT DEFAULT 'main')');
-                                                                                          ^^^^
-lib/db.dart:23:20: Error: Too many positional arguments: 2 allowed, but 3 found.
-Try removing the extra positional arguments.
-    await d.execute(
-                   ^
-Target kernel_snapshot_program failed: Exception
-
-
-FAILURE: Build failed with an exception.
-
-* What went wrong:
-Execution failed for task ':app:compileFlutterBuildRelease'.
-> Process 'command '/opt/hostedtoolcache/flutter/stable-3.24.5-x64/flutter/bin/flutter'' finished with non-zero exit value 1
-
-* Try:
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to get full insights.
-> Get more help at https://help.gradle.org.
-
-BUILD FAILED in 4m 21s
-Running Gradle task 'assembleRelease'...                          262.2s
-Gradle task assembleRelease failed with exit code 1
+Caught exception: Already watching path: /home/runner/work/wallet-pro/wallet-pro/android
+Running Gradle task 'assembleRelease'...                          408.2s
+✓ Built build/app/outputs/flutter-apk/app-release.apk (26.6MB)
