@@ -34,6 +34,13 @@ jobs:
           sed -i 's|<application|<uses-permission android:name="android.permission.RECORD_AUDIO"/>\n    <uses-permission android:name="android.permission.INTERNET"/>\n    <queries><intent><action android:name="android.speech.RecognitionService"/></intent></queries>\n    <application|' $M
           sed -i 's|android:label="wallet_pro"|android:label="Wallet Pro"|' $M
 
+      - name: Set Android compile/target SDK to 35 and drop default test
+        run: |
+          G=android/app/build.gradle
+          sed -i 's|flutter.compileSdkVersion|35|g' $G
+          sed -i 's|flutter.targetSdkVersion|35|g' $G
+          rm -f test/widget_test.dart
+
       - name: Use persistent signing key (stable app identity)
         run: |
           mkdir -p ~/.android
