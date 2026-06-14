@@ -4,7 +4,7 @@ Analyzing wallet-pro...
 warning • The include file 'package:flutter_lints/flutter.yaml' in '/home/runner/work/wallet-pro/wallet-pro/analysis_options.yaml' can't be found when analyzing '/home/runner/work/wallet-pro/wallet-pro' • analysis_options.yaml:10:10 • include_file_not_found
 warning • The '!' will have no effect because the receiver can't be null • lib/db.dart:310:52 • unnecessary_non_null_assertion
 
-2 issues found. (ran in 16.6s)
+2 issues found. (ran in 19.9s)
 ===== flutter build apk =====
 
 Running Gradle task 'assembleRelease'...                        
@@ -23,5 +23,5 @@ Installing Android SDK Platform 33 in /usr/local/lib/android/sdk/platforms/andro
 "Install Android SDK Platform 33 (revision 3)" complete.
 "Install Android SDK Platform 33 (revision 3)" finished.
 Caught exception: Already watching path: /home/runner/work/wallet-pro/wallet-pro/android
-Running Gradle task 'assembleRelease'...                          373.6s
-✓ Built build/app/outputs/flutter-apk/app-release.apk (24.8MB)
+Running Gradle task 'assembleRelease'...                          390.1s
+✓ Built build/app/outputs/flutter-apk/app-release.apk (26.5MB)
