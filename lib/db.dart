@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
@@ -17,25 +16,58 @@ class DB {
 
   static Future<Database> _open() async {
     final path = p.join(await getDatabasesPath(), 'wallet_pro.db');
-    return openDatabase(path, version: 1, onCreate: _create);
+    return openDatabase(path, version: 2, onCreate: _create, onUpgrade: _upgrade);
   }
 
   static Future<void> _create(Database d, int v) async {
     await d.execute(
-        'CREATE TABLE accounts(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, opening REAL DEFAULT 0)');
+        'CREATE TABLE accounts(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, opening REAL DEFAULT 0, archived INTEGER DEFAULT 0, phone TEXT)');
     await d.execute(
-        'CREATE TABLE cats(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER)');
+        'CREATE TABLE cats(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, archived INTEGER DEFAULT 0)');
     await d.execute(
         'CREATE TABLE txns(id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, amount REAL, accountId INTEGER, toAccountId INTEGER, categoryId INTEGER, date TEXT, note TEXT)');
     await d.execute(
         'CREATE TABLE loans(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, principal REAL, rate REAL, dueDate TEXT, paid REAL DEFAULT 0, note TEXT)');
     await d.execute(
         'CREATE TABLE budgets(id INTEGER PRIMARY KEY AUTOINCREMENT, categoryId INTEGER, limitAmt REAL)');
+    await _createV2(d);
+    await _seed(d);
+  }
 
+  static Future<void> _createV2(Database d) async {
+    await d.execute('CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY, v TEXT)');
+    await d.execute(
+        'CREATE TABLE IF NOT EXISTS goals(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, target REAL, saved REAL DEFAULT 0, icon INTEGER, color INTEGER, dueDate TEXT, note TEXT)');
+    // Recurring rules + planned payments.
+    // autoPost 1 = post automatically on/after nextDate; 0 = reminder only.
+    await d.execute('''CREATE TABLE IF NOT EXISTS recurring(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT, type TEXT, amount REAL,
+        accountId INTEGER, toAccountId INTEGER, categoryId INTEGER, note TEXT,
+        freq TEXT, dayOfMonth INTEGER, nextDate TEXT,
+        autoPost INTEGER DEFAULT 1, active INTEGER DEFAULT 1)''');
+  }
+
+  static Future<void> _upgrade(Database d, int from, int to) async {
+    if (from < 2) {
+      // add new columns to existing tables (safe if column is new)
+      for (final sql in [
+        'ALTER TABLE accounts ADD COLUMN archived INTEGER DEFAULT 0',
+        'ALTER TABLE accounts ADD COLUMN phone TEXT',
+        'ALTER TABLE cats ADD COLUMN archived INTEGER DEFAULT 0',
+      ]) {
+        try {
+          await d.execute(sql);
+        } catch (_) {}
+      }
+      await _createV2(d);
+    }
+  }
+
+  static Future<void> _seed(Database d) async {
     Future<void> cat(String n, String t, IconData i, Color c) =>
         d.insert('cats', {'name': n, 'type': t, 'icon': i.codePoint, 'color': c.value});
 
-    // Expense categories
     await cat('Food & Dining', 'expense', Icons.restaurant, Colors.deepOrange);
     await cat('Groceries', 'expense', Icons.shopping_cart, Colors.green);
     await cat('Transport', 'expense', Icons.directions_car, Colors.blue);
@@ -48,9 +80,9 @@ class DB {
     await cat('Entertainment', 'expense', Icons.movie, Colors.pink);
     await cat('Charity & Zakat', 'expense', Icons.volunteer_activism, Colors.lightGreen);
     await cat('Family', 'expense', Icons.family_restroom, Colors.amber);
+    await cat('Pocket Money', 'expense', Icons.payments, Colors.deepPurple);
     await cat('Loan Payment', 'expense', Icons.account_balance, Colors.blueGrey);
     await cat('Other Expense', 'expense', Icons.category, Colors.grey);
-    // Income categories
     await cat('Salary', 'income', Icons.payments, Colors.green);
     await cat('Business', 'income', Icons.storefront, Colors.teal);
     await cat('Investment Income', 'income', Icons.trending_up, Colors.indigo);
@@ -88,6 +120,27 @@ class DB {
     bus.ping();
   }
 
+  /// Active (non-archived) accounts.
+  static Future<List<Map<String, Object?>>> accounts({bool includeArchived = false}) async =>
+      (await db).query('accounts',
+          where: includeArchived ? null : 'archived=0', orderBy: 'name');
+
+  /// Active (non-archived) categories, optionally by type.
+  static Future<List<Map<String, Object?>>> categories(
+      {String? type, bool includeArchived = false}) async {
+    final where = <String>[];
+    final args = <Object?>[];
+    if (!includeArchived) where.add('archived=0');
+    if (type != null) {
+      where.add('type=?');
+      args.add(type);
+    }
+    return (await db).query('cats',
+        where: where.isEmpty ? null : where.join(' AND '),
+        whereArgs: args.isEmpty ? null : args,
+        orderBy: 'name');
+  }
+
   // ---------- balances ----------
   static Future<Map<int, double>> balances() async {
     final d = await db;
@@ -110,6 +163,50 @@ class DB {
       }
     }
     return map;
+  }
+
+  /// Full ledger for one account, oldest first, with signed delta + running balance.
+  /// Each row: {txn fields..., catName, catIcon, catColor, otherName, delta, running}
+  static Future<List<Map<String, Object?>>> accountLedger(int accountId) async {
+    final d = await db;
+    final acc = await d.query('accounts', where: 'id=?', whereArgs: [accountId]);
+    final opening = acc.isEmpty ? 0.0 : ((acc.first['opening'] as num?) ?? 0).toDouble();
+    final rows = await d.rawQuery('''
+      SELECT t.*, c.name catName, c.icon catIcon, c.color catColor,
+             af.name fromName, at.name toName
+      FROM txns t
+      LEFT JOIN cats c ON c.id=t.categoryId
+      LEFT JOIN accounts af ON af.id=t.accountId
+      LEFT JOIN accounts at ON at.id=t.toAccountId
+      WHERE t.accountId=? OR t.toAccountId=?
+      ORDER BY t.date ASC, t.id ASC''', [accountId, accountId]);
+    double running = opening;
+    final out = <Map<String, Object?>>[];
+    for (final r in rows) {
+      final amt = ((r['amount'] as num?) ?? 0).toDouble();
+      final type = r['type'] as String?;
+      double delta = 0;
+      String label;
+      if (type == 'income') {
+        delta = amt;
+        label = r['catName'] as String? ?? 'Income';
+      } else if (type == 'expense') {
+        delta = -amt;
+        label = r['catName'] as String? ?? 'Expense';
+      } else {
+        // transfer
+        if ((r['accountId'] as int?) == accountId) {
+          delta = -amt;
+          label = 'Transfer to ${r['toName'] ?? ''}';
+        } else {
+          delta = amt;
+          label = 'Transfer from ${r['fromName'] ?? ''}';
+        }
+      }
+      running += delta;
+      out.add({...r, 'delta': delta, 'running': running, 'label': label});
+    }
+    return out.reversed.toList(); // newest first for display
   }
 
   // ---------- report queries ----------
@@ -146,6 +243,77 @@ class DB {
     };
   }
 
+  /// Suggest most-used categories for a type (recency + frequency), for quick pick.
+  static Future<List<int>> suggestedCats(String type, {int limit = 4}) async {
+    final rows = await (await db).rawQuery('''
+      SELECT categoryId, COUNT(*) c, MAX(date) last FROM txns
+      WHERE type=? AND categoryId IS NOT NULL
+      GROUP BY categoryId ORDER BY c DESC, last DESC LIMIT ?''', [type, limit]);
+    return [for (final r in rows) r['categoryId'] as int];
+  }
+
+  // ---------- settings ----------
+  static Future<String?> settingGet(String k) async {
+    final r = await (await db).query('settings', where: 'k=?', whereArgs: [k]);
+    return r.isEmpty ? null : r.first['v'] as String?;
+  }
+
+  static Future<void> settingSet(String k, String v) async {
+    await (await db)
+        .insert('settings', {'k': k, 'v': v}, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  // ---------- recurring / planned ----------
+  static DateTime _advance(DateTime from, String freq, int dom) {
+    switch (freq) {
+      case 'weekly':
+        return from.add(const Duration(days: 7));
+      case 'yearly':
+        return DateTime(from.year + 1, from.month, from.day);
+      default: // monthly
+        var y = from.year, m = from.month + 1;
+        if (m > 12) {
+          m = 1;
+          y++;
+        }
+        final lastDay = DateTime(y, m + 1, 0).day;
+        return DateTime(y, m, dom.clamp(1, lastDay));
+    }
+  }
+
+  /// Posts all due auto rules up to [now]. Returns number of txns created.
+  static Future<int> runRecurring([DateTime? at]) async {
+    final d = await db;
+    final now = at ?? DateTime.now();
+    final rules = await d.query('recurring', where: 'active=1 AND autoPost=1');
+    int posted = 0;
+    for (final r in rules) {
+      var next = DateTime.tryParse(r['nextDate'] as String? ?? '');
+      if (next == null) continue;
+      final freq = r['freq'] as String? ?? 'monthly';
+      final dom = (r['dayOfMonth'] as int?) ?? next.day;
+      var guard = 0;
+      while (!next!.isAfter(now) && guard < 60) {
+        await d.insert('txns', {
+          'type': r['type'],
+          'amount': r['amount'],
+          'accountId': r['accountId'],
+          'toAccountId': r['toAccountId'],
+          'categoryId': r['categoryId'],
+          'date': next.toIso8601String(),
+          'note': '${r['note'] ?? ''}${(r['note'] ?? '').toString().isEmpty ? '' : ' '}(auto)',
+        });
+        posted++;
+        next = _advance(next, freq, dom);
+        guard++;
+      }
+      await d.update('recurring', {'nextDate': next!.toIso8601String()},
+          where: 'id=?', whereArgs: [r['id']]);
+    }
+    if (posted > 0) bus.ping();
+    return posted;
+  }
+
   // ---------- get-or-create (used by CSV import) ----------
   static Future<int> accountByName(String name) async {
     final d = await db;
@@ -173,17 +341,18 @@ class DB {
   }
 
   // ---------- backup / restore ----------
+  static const _tables = ['accounts', 'cats', 'txns', 'loans', 'budgets', 'goals', 'recurring', 'settings'];
+
   static Future<Map<String, Object?>> dump() async {
     final d = await db;
-    return {
-      for (final t in ['accounts', 'cats', 'txns', 'loans', 'budgets']) t: await d.query(t)
-    };
+    return {for (final t in _tables) t: await d.query(t)};
   }
 
   static Future<void> restore(Map data) async {
     final d = await db;
     await d.transaction((tx) async {
-      for (final t in ['accounts', 'cats', 'txns', 'loans', 'budgets']) {
+      for (final t in _tables) {
+        if (!data.containsKey(t)) continue;
         await tx.delete(t);
         for (final row in (data[t] as List? ?? const [])) {
           await tx.insert(t, Map<String, Object?>.from(row as Map));

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../db.dart';
+import '../theme.dart';
 import '../widgets.dart';
 import 'txn_edit.dart';
 
-const accountTypes = ['Bank', 'Cash', 'Savings', 'Investment', 'Credit'];
+const accountTypes = ['Bank', 'Cash', 'Savings', 'Investment', 'Credit', 'Person', 'Wallet'];
 
 /// Full account list (opened from More tab).
 class AccountsScreen extends StatefulWidget {
@@ -211,8 +212,8 @@ class AccountDetail extends StatefulWidget {
 }
 
 class _AccountDetailState extends State<AccountDetail> {
-  List<Map<String, Object?>> txns = [];
-  Map<int, Map<String, Object?>> cats = {}, accts = {};
+  List<Map<String, Object?>> ledger = [];
+  String filter = 'all';
   double balance = 0, incomeT = 0, expenseT = 0;
 
   @override
@@ -230,25 +231,16 @@ class _AccountDetailState extends State<AccountDetail> {
 
   Future<void> _load() async {
     final id = widget.account['id'] as int;
-    final t = await DB.all('txns',
-        where: 'accountId=? OR toAccountId=?', args: [id, id], orderBy: 'date DESC, id DESC');
-    final c = await DB.all('cats');
-    final a = await DB.all('accounts');
-    final b = await DB.balances();
+    final l = await DB.accountLedger(id);
     double inc = 0, exp = 0;
-    for (final r in t) {
-      final amt = ((r['amount'] as num?) ?? 0).toDouble();
-      final type = r['type'];
-      if (type == 'income' && r['accountId'] == id) inc += amt;
-      if (type == 'expense' && r['accountId'] == id) exp += amt;
-      if (type == 'transfer' && r['toAccountId'] == id) inc += amt;
-      if (type == 'transfer' && r['accountId'] == id) exp += amt;
+    for (final r in l) {
+      final d = (r['delta'] as num).toDouble();
+      if (d >= 0) inc += d; else exp += -d;
     }
+    final b = await DB.balances();
     if (!mounted) return;
     setState(() {
-      txns = t;
-      cats = {for (final x in c) x['id'] as int: x};
-      accts = {for (final x in a) x['id'] as int: x};
+      ledger = l;
       balance = b[id] ?? 0;
       incomeT = inc;
       expenseT = exp;
@@ -257,30 +249,15 @@ class _AccountDetailState extends State<AccountDetail> {
 
   @override
   Widget build(BuildContext context) {
-    final items = <Widget>[];
-    String? lastDay;
-    for (final t in txns) {
-      final day = (t['date'] as String? ?? '').length >= 10
-          ? (t['date'] as String).substring(0, 10)
-          : '';
-      if (day != lastDay) {
-        lastDay = day;
-        items.add(Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: Text(
-            day.isEmpty ? 'Unknown date' : DateFormat('EEE, d MMM yyyy').format(DateTime.parse(day)),
-            style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.grey, fontSize: 12),
-          ),
-        ));
+    final cs = Theme.of(context).colorScheme;
+    final rows = ledger.where((r) {
+      switch (filter) {
+        case 'income': return r['type'] == 'income';
+        case 'expense': return r['type'] == 'expense';
+        case 'transfer': return r['type'] == 'transfer';
+        default: return true;
       }
-      items.add(TxnTile(
-        t: t,
-        cats: cats,
-        accts: accts,
-        onTap: () =>
-            Navigator.push(context, MaterialPageRoute(builder: (_) => TxnEdit(txn: t))),
-      ));
-    }
+    }).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -295,42 +272,99 @@ class _AccountDetailState extends State<AccountDetail> {
       ),
       body: Column(
         children: [
-          Card(
+          Container(
             margin: const EdgeInsets.all(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Text('Balance', style: Theme.of(context).textTheme.labelLarge),
-                  Text(money(balance),
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Column(children: [
-                        const Text('Money in', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        Text('+${money(incomeT)}',
-                            style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600)),
-                      ]),
-                      Column(children: [
-                        const Text('Money out', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        Text('\u2212${money(expenseT)}',
-                            style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
-                      ]),
-                    ],
-                  ),
-                ],
-              ),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: headerGradient(context),
+              borderRadius: BorderRadius.circular(20),
             ),
+            child: Column(children: [
+              const Text('Current balance',
+                  style: TextStyle(color: Colors.white70, fontSize: 13)),
+              const SizedBox(height: 4),
+              Text(money(balance),
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+                Column(children: [
+                  const Text('Money in', style: TextStyle(fontSize: 12, color: Colors.white70)),
+                  Text('+${money(incomeT)}',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                ]),
+                Column(children: [
+                  const Text('Money out', style: TextStyle(fontSize: 12, color: Colors.white70)),
+                  Text('\u2212${money(expenseT)}',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                ]),
+              ]),
+            ]),
           ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(children: [
+              for (final f in const [
+                ['all', 'All'], ['income', 'Income'],
+                ['expense', 'Expense'], ['transfer', 'Transfers']
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(f[1]),
+                    selected: filter == f[0],
+                    onSelected: (_) => setState(() => filter = f[0]),
+                  ),
+                ),
+            ]),
+          ),
+          const SizedBox(height: 4),
           Expanded(
-            child: txns.isEmpty
-                ? const Center(child: Text('No records yet for this account'))
-                : ListView(children: items),
+            child: rows.isEmpty
+                ? const Center(child: Text('No records for this filter'))
+                : ListView.separated(
+                    itemCount: rows.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1, indent: 64),
+                    itemBuilder: (_, i) {
+                      final r = rows[i];
+                      final delta = (r['delta'] as num).toDouble();
+                      final running = (r['running'] as num).toDouble();
+                      final up = delta >= 0;
+                      final date = DateTime.tryParse(r['date'] as String? ?? '');
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              Color((r['catColor'] as int?) ?? cs.primary.value),
+                          child: Icon(
+                              r['type'] == 'transfer'
+                                  ? Icons.swap_horiz
+                                  : iconOf(r['catIcon']),
+                              color: Colors.white, size: 20),
+                        ),
+                        title: Text(r['label'] as String? ?? '',
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text(
+                          '${date != null ? DateFormat('d MMM yyyy').format(date) : ''}'
+                          '${(r['note'] as String?)?.isNotEmpty == true ? ' \u00b7 ${r['note']}' : ''}',
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text('${up ? '+' : '\u2212'}${money(delta.abs())}',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    color: up ? Colors.green : Colors.red)),
+                            Text('Bal ${money(running)}',
+                                style: TextStyle(fontSize: 11, color: cs.outline)),
+                          ],
+                        ),
+                        onTap: () => Navigator.push(context,
+                            MaterialPageRoute(builder: (_) => TxnEdit(txn: r))),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

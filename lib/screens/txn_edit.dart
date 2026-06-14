@@ -6,7 +6,9 @@ import '../widgets.dart';
 
 class TxnEdit extends StatefulWidget {
   final Map<String, Object?>? txn;
-  const TxnEdit({super.key, this.txn});
+  final bool autoVoice;
+  final String? initialType;
+  const TxnEdit({super.key, this.txn, this.autoVoice = false, this.initialType});
   @override
   State<TxnEdit> createState() => _TxnEditState();
 }
@@ -24,12 +26,15 @@ class _TxnEditState extends State<TxnEdit> {
   @override
   void initState() {
     super.initState();
-    _load();
+    if (widget.initialType != null) type = widget.initialType!;
+    _load().then((_) {
+      if (widget.autoVoice && mounted) _voice();
+    });
   }
 
   Future<void> _load() async {
-    final a = await DB.all('accounts', orderBy: 'name');
-    final c = await DB.all('cats', orderBy: 'name');
+    final a = await DB.accounts();
+    final c = await DB.categories();
     final t = widget.txn;
     if (t != null) {
       type = t['type'] as String? ?? 'expense';

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'db.dart';
+import 'theme.dart';
 import 'screens/budgets.dart';
 import 'screens/home.dart';
 import 'screens/more.dart';
@@ -10,19 +12,39 @@ void main() {
   runApp(const WalletApp());
 }
 
-class WalletApp extends StatelessWidget {
+class WalletApp extends StatefulWidget {
   const WalletApp({super.key});
+  @override
+  State<WalletApp> createState() => _WalletAppState();
+}
+
+class _WalletAppState extends State<WalletApp> {
+  @override
+  void initState() {
+    super.initState();
+    _boot();
+  }
+
+  Future<void> _boot() async {
+    await DB.db; // ensure migration runs
+    await theme.load();
+    await DB.runRecurring(); // post any due recurring payments
+  }
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: theme,
+      builder: (_, __) => MaterialApp(
         title: 'Wallet Pro',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorSchemeSeed: const Color(0xFF00695C),
-        ),
+        theme: theme.light,
+        darkTheme: theme.dark,
+        themeMode: theme.mode,
         home: const Shell(),
-      );
+      ),
+    );
+  }
 }
 
 class Shell extends StatefulWidget {
@@ -37,7 +59,6 @@ class _ShellState extends State<Shell> {
   @override
   void initState() {
     super.initState();
-    // Daily Google Drive auto-backup (only if enabled in More > Google Drive).
     tryAutoBackup();
   }
 

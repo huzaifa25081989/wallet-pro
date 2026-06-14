@@ -12,7 +12,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../db.dart';
+import '../theme.dart';
 import '../widgets.dart';
+import 'appearance.dart';
 import 'accounts.dart';
 import 'categories.dart';
 import 'coa.dart';
@@ -281,6 +283,16 @@ class _MoreScreenState extends State<MoreScreen> {
       appBar: AppBar(title: const Text('More')),
       body: ListView(
         children: [
+          const _Header('Personalize'),
+          ListTile(
+            leading: const Icon(Icons.palette_outlined),
+            title: const Text('Appearance & Theme'),
+            subtitle: Text('${theme.current.name} theme'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const AppearanceScreen())),
+          ),
+          const Divider(),
           const _Header('Manage'),
           ListTile(
             leading: const Icon(Icons.account_balance_wallet_outlined),
