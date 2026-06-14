@@ -91,6 +91,7 @@ class AccountEdit extends StatefulWidget {
 class _AccountEditState extends State<AccountEdit> {
   final nameCtl = TextEditingController();
   final openCtl = TextEditingController(text: '0');
+  final phoneCtl = TextEditingController();
   String type = 'Bank';
   String grp = 'main';
   int icon = Icons.account_balance.codePoint;
@@ -103,6 +104,7 @@ class _AccountEditState extends State<AccountEdit> {
     if (a != null) {
       nameCtl.text = a['name'] as String? ?? '';
       openCtl.text = '${(a['opening'] as num?) ?? 0}';
+      phoneCtl.text = a['phone'] as String? ?? '';
       type = a['type'] as String? ?? 'Bank';
       grp = a['grp'] as String? ?? 'main';
       icon = (a['icon'] as int?) ?? icon;
@@ -122,6 +124,7 @@ class _AccountEditState extends State<AccountEdit> {
       'color': color,
       'opening': double.tryParse(openCtl.text.replaceAll(',', '')) ?? 0,
       'grp': grp,
+      'phone': phoneCtl.text.trim(),
     };
     if (widget.account == null) {
       await DB.insert('accounts', m);
@@ -186,6 +189,15 @@ class _AccountEditState extends State<AccountEdit> {
               decoration: const InputDecoration(
                   labelText: 'Opening balance',
                   prefixText: '$kCur ',
+                  border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: phoneCtl,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                  labelText: 'Phone for WhatsApp (optional)',
+                  hintText: 'e.g. 03001234567',
                   border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),

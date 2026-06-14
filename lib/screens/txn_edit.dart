@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import '../db.dart';
 import '../widgets.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TxnEdit extends StatefulWidget {
   final Map<String, Object?>? txn;
@@ -28,6 +29,7 @@ class _TxnEditState extends State<TxnEdit> {
   List<Map<String, Object?>> accounts = [], cats = [];
   final stt = SpeechToText();
   bool listening = false;
+  List<int> suggested = [];
 
   @override
   void initState() {
@@ -58,6 +60,30 @@ class _TxnEditState extends State<TxnEdit> {
       cats = c;
       accountId ??= accounts.isNotEmpty ? accounts.first['id'] as int : null;
     });
+    _loadSuggested();
+  }
+
+  Future<void> _loadSuggested() async {
+    if (type == 'transfer') {
+      if (mounted) setState(() => suggested = []);
+      return;
+    }
+    final sug = await DB.suggestedCats(type);
+    if (mounted) setState(() => suggested = sug);
+  }
+
+  Map<String, Object?>? _acc(int? id) {
+    for (final a in accounts) {
+      if (a['id'] == id) return a;
+    }
+    return null;
+  }
+
+  Map<String, Object?>? _cat(int? id) {
+    for (final c in cats) {
+      if (c['id'] == id) return c;
+    }
+    return null;
   }
 
   List<Map<String, Object?>> get catItems =>
@@ -149,7 +175,43 @@ class _TxnEditState extends State<TxnEdit> {
       m['id'] = widget.txn!['id'];
       await DB.update('txns', m);
     }
+    await _maybeNotify(amt);
     if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _maybeNotify(double amt) async {
+    // find an involved account that has a phone number
+    Map<String, Object?>? target;
+    for (final id in [accountId, if (type == 'transfer') toAccountId]) {
+      final a = _acc(id);
+      final ph = (a?['phone'] as String?)?.trim() ?? '';
+      if (ph.isNotEmpty) {
+        target = a;
+        break;
+      }
+    }
+    if (target == null || !mounted) return;
+    final name = target['name'] as String? ?? '';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text('Notify $name on WhatsApp?'),
+        content: Text('Send $name a message that you recorded ${money(amt)} in your shared account.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('No')),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Send')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    var digits = (target['phone'] as String).replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.startsWith('0')) digits = '92${digits.substring(1)}'; // PK default
+    final word = type == 'income' ? 'received' : type == 'expense' ? 'spent' : 'transferred';
+    final note = noteCtl.text.trim();
+    final msg = 'Hi $name, recorded in our account: $word ${money(amt)}'
+        '${note.isEmpty ? '' : ' ($note)'} on ${DateFormat('d MMM yyyy').format(date)}.';
+    final uri = Uri.parse('https://wa.me/$digits?text=${Uri.encodeComponent(msg)}');
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Future<void> _delete() async {
@@ -186,10 +248,13 @@ class _TxnEditState extends State<TxnEdit> {
               ButtonSegment(value: 'transfer', label: Text('Transfer'), icon: Icon(Icons.swap_horiz)),
             ],
             selected: {type},
-            onSelectionChanged: (s) => setState(() {
-              type = s.first;
-              categoryId = null;
-            }),
+            onSelectionChanged: (s) {
+              setState(() {
+                type = s.first;
+                categoryId = null;
+              });
+              _loadSuggested();
+            },
           ),
           const SizedBox(height: 16),
           TextField(
@@ -203,55 +268,54 @@ class _TxnEditState extends State<TxnEdit> {
             ),
           ),
           const SizedBox(height: 12),
-          DropdownButtonFormField<int>(
-            value: accountId,
-            decoration: InputDecoration(
-                labelText: type == 'transfer' ? 'From account' : 'Account',
-                border: const OutlineInputBorder()),
-            items: [
-              for (final a in accounts)
-                DropdownMenuItem(
-                  value: a['id'] as int,
-                  child: Row(children: [
-                    Icon(iconOf(a['icon']), size: 18, color: Color((a['color'] as int?) ?? 0xFF607D8B)),
-                    const SizedBox(width: 8),
-                    Text(a['name'] as String? ?? ''),
-                  ]),
-                ),
-            ],
-            onChanged: (v) => setState(() => accountId = v),
+          PickerField(
+            label: type == 'transfer' ? 'From account' : 'Account',
+            value: _acc(accountId),
+            onTap: () async {
+              final id = await pickEntity(context, 'Choose account', accounts, selected: accountId);
+              if (id != null) setState(() => accountId = id);
+            },
           ),
           const SizedBox(height: 12),
           if (type == 'transfer')
-            DropdownButtonFormField<int>(
-              value: toAccountId == accountId ? null : toAccountId,
-              decoration: const InputDecoration(
-                  labelText: 'To account', border: OutlineInputBorder()),
-              items: [
-                for (final a in accounts.where((a) => a['id'] != accountId))
-                  DropdownMenuItem(
-                      value: a['id'] as int, child: Text(a['name'] as String? ?? '')),
-              ],
-              onChanged: (v) => setState(() => toAccountId = v),
+            PickerField(
+              label: 'To account',
+              value: _acc(toAccountId == accountId ? null : toAccountId),
+              onTap: () async {
+                final id = await pickEntity(context, 'Transfer to',
+                    accounts.where((a) => a['id'] != accountId).toList(),
+                    selected: toAccountId);
+                if (id != null) setState(() => toAccountId = id);
+              },
             )
-          else
-            DropdownButtonFormField<int>(
-              value: validCat,
-              decoration: const InputDecoration(
-                  labelText: 'Category', border: OutlineInputBorder()),
-              items: [
-                for (final c in catItems)
-                  DropdownMenuItem(
-                    value: c['id'] as int,
-                    child: Row(children: [
-                      Icon(iconOf(c['icon']), size: 18, color: Color((c['color'] as int?) ?? 0xFF9E9E9E)),
-                      const SizedBox(width: 8),
-                      Text(c['name'] as String? ?? ''),
-                    ]),
-                  ),
-              ],
-              onChanged: (v) => setState(() => categoryId = v),
+          else ...[
+            if (suggested.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final sid in suggested)
+                      if (_cat(sid) != null)
+                        ChoiceChip(
+                          avatar: Icon(iconOf(_cat(sid)!['icon']), size: 16,
+                              color: Color((_cat(sid)!['color'] as int?) ?? 0xFF9E9E9E)),
+                          label: Text(_cat(sid)!['name'] as String? ?? ''),
+                          selected: categoryId == sid,
+                          onSelected: (_) => setState(() => categoryId = sid),
+                        ),
+                  ],
+                ),
+              ),
+            PickerField(
+              label: 'Category',
+              value: _cat(validCat),
+              onTap: () async {
+                final id = await pickEntity(context, 'Choose category', catItems, selected: validCat);
+                if (id != null) setState(() => categoryId = id);
+              },
             ),
+          ],
           const SizedBox(height: 12),
           Card(
             child: ListTile(

@@ -17,11 +17,15 @@ import '../db.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'appearance.dart';
+import 'activate.dart';
 import 'drive_help.dart';
+import '../pro.dart';
 import 'accounts.dart';
 import 'categories.dart';
 import 'coa.dart';
+import 'goals.dart';
 import 'loans.dart';
+import 'recurring.dart';
 
 final _gsi = GoogleSignIn(scopes: [gd.DriveApi.driveAppdataScope]);
 
@@ -312,6 +316,7 @@ class _MoreScreenState extends State<MoreScreen> {
   }
 
   Future<void> _toggleAuto(bool v) async {
+    if (v && !await requirePro(context, 'Automatic Google Drive backup')) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('autoBackup', v);
     setState(() => autoBackup = v);
@@ -366,6 +371,20 @@ class _MoreScreenState extends State<MoreScreen> {
             onTap: () => Navigator.push(
                 context, MaterialPageRoute(builder: (_) => const LoansScreen())),
           ),
+          ListTile(
+            leading: const Icon(Icons.event_repeat_outlined),
+            title: const Text('Recurring & Planned'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const RecurringScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.flag_outlined),
+            title: const Text('Savings Goals'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const GoalsScreen())),
+          ),
           const Divider(),
           const _Header('Backup & data'),
           ListTile(
@@ -415,6 +434,18 @@ class _MoreScreenState extends State<MoreScreen> {
           ),
           const Divider(),
           const _Header('App'),
+          ListTile(
+            leading: Icon(pro.isPro ? Icons.verified : Icons.workspace_premium,
+                color: Theme.of(context).colorScheme.primary),
+            title: Text(pro.isPro ? 'Wallet Pro — Active' : 'Upgrade to Wallet Pro'),
+            subtitle: Text(pro.isPro
+                ? '${pro.tier.toUpperCase()} · until ${pro.expiryLabel}'
+                : 'Unlock PDF/Excel export & cloud auto-backup'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const ActivateScreen()))
+                .then((_) => setState(() {})),
+          ),
           ListTile(
             leading: const Icon(Icons.system_update_outlined),
             title: const Text('Check for updates'),

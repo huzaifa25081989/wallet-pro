@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../db.dart';
 import '../export.dart';
+import 'activate.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -198,8 +199,12 @@ class _StatementScreenState extends State<StatementScreen> {
                 label: const Text('PDF'),
                 onPressed: busy || data == null
                     ? null
-                    : () => _run(() => exportStatementPdf(
-                        title: _title, subtitle: _subtitle, statement: data!)),
+                    : () async {
+                        if (await requirePro(context, 'PDF & Excel export')) {
+                          _run(() => exportStatementPdf(
+                              title: _title, subtitle: _subtitle, statement: data!));
+                        }
+                      },
               ),
             ),
             const SizedBox(width: 8),
@@ -209,8 +214,12 @@ class _StatementScreenState extends State<StatementScreen> {
                 label: const Text('Excel'),
                 onPressed: busy || data == null
                     ? null
-                    : () => _run(() => exportStatementExcel(
-                        title: _title, subtitle: _subtitle, statement: data!)),
+                    : () async {
+                        if (await requirePro(context, 'PDF & Excel export')) {
+                          _run(() => exportStatementExcel(
+                              title: _title, subtitle: _subtitle, statement: data!));
+                        }
+                      },
               ),
             ),
             const SizedBox(width: 8),
@@ -218,7 +227,7 @@ class _StatementScreenState extends State<StatementScreen> {
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.pie_chart, size: 18),
                 label: const Text('By Category'),
-                onPressed: busy ? null : _categoryExport,
+                onPressed: busy ? null : () async { if (await requirePro(context, 'PDF & Excel export')) _categoryExport(); },
               ),
             ),
           ]),

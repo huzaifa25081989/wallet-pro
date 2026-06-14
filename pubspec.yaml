@@ -28,6 +28,7 @@ dependencies:
   http: ^1.2.1
   url_launcher: ^6.3.0
   package_info_plus: ^8.0.2
+  cryptography: ^2.7.0
 
 dev_dependencies:
   flutter_test:

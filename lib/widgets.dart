@@ -127,3 +127,98 @@ class TxnTile extends StatelessWidget {
     );
   }
 }
+
+/// A searchable bottom-sheet picker over a list of {id,name,icon,color} maps.
+/// Returns the chosen id, or null if dismissed.
+Future<int?> pickEntity(
+  BuildContext context,
+  String title,
+  List<Map<String, Object?>> items, {
+  int? selected,
+}) {
+  return showModalBottomSheet<int>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (c) {
+      String q = '';
+      return StatefulBuilder(builder: (c, setSheet) {
+        final filtered = items
+            .where((e) =>
+                (e['name'] as String? ?? '').toLowerCase().contains(q.toLowerCase()))
+            .toList();
+        return Padding(
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(c).viewInsets.bottom,
+              left: 12,
+              right: 12,
+              top: 4),
+          child: SizedBox(
+            height: MediaQuery.of(c).size.height * 0.6,
+            child: Column(children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              TextField(
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Search...',
+                  prefixIcon: Icon(Icons.search),
+                ),
+                onChanged: (v) => setSheet(() => q = v),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: filtered.length,
+                  itemBuilder: (_, i) {
+                    final e = filtered[i];
+                    final sel = e['id'] == selected;
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Color((e['color'] as int?) ?? 0xFF607D8B),
+                        child: Icon(iconOf(e['icon']), color: Colors.white, size: 18),
+                      ),
+                      title: Text(e['name'] as String? ?? ''),
+                      trailing: sel ? const Icon(Icons.check) : null,
+                      onTap: () => Navigator.pop(c, e['id'] as int?),
+                    );
+                  },
+                ),
+              ),
+            ]),
+          ),
+        );
+      });
+    },
+  );
+}
+
+/// A tappable field that looks like an input and opens [pickEntity].
+class PickerField extends StatelessWidget {
+  final String label;
+  final Map<String, Object?>? value;
+  final VoidCallback onTap;
+  const PickerField({super.key, required this.label, required this.value, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: InputDecorator(
+        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+        child: Row(children: [
+          if (value != null) ...[
+            Icon(iconOf(value!['icon']), size: 18, color: Color((value!['color'] as int?) ?? 0xFF607D8B)),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            child: Text(value == null ? 'Tap to choose' : (value!['name'] as String? ?? ''),
+                style: TextStyle(color: value == null ? Colors.grey : null)),
+          ),
+          const Icon(Icons.arrow_drop_down),
+        ]),
+      ),
+    );
+  }
+}
