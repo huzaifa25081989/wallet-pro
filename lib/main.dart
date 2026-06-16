@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'db.dart';
+import 'branding.dart';
 import 'pro.dart';
 import 'theme.dart';
 import 'screens/budgets.dart';
@@ -30,6 +31,7 @@ class _WalletAppState extends State<WalletApp> {
     await DB.db; // ensure migration runs
     await theme.load();
     await pro.load();
+    await branding.load();
     await DB.runRecurring(); // post any due recurring payments
   }
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:intl/intl.dart';
 
-const kCur = 'Rs';
+String kCur = 'Rs'; // editable via admin branding
 final _nf = NumberFormat('#,##0.##');
 
 String fmt(num v) => _nf.format(v);

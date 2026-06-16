@@ -426,6 +426,14 @@ class DB {
     }
   }
 
+  /// Raw transactions in a window with category name, for analytics.
+  static Future<List<Map<String, Object?>>> txnsRaw(String fromIso, String toIso) async {
+    return (await db).rawQuery('''
+      SELECT t.type, t.amount, t.categoryId, t.date, t.note, c.name catName
+      FROM txns t LEFT JOIN cats c ON c.id=t.categoryId
+      WHERE t.date>=? AND t.date<? ORDER BY t.date ASC''', [fromIso, toIso]);
+  }
+
   // ---------- get-or-create (used by CSV import) ----------
   static Future<int> accountByName(String name) async {
     final d = await db;

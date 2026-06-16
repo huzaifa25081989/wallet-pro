@@ -17,8 +17,12 @@ import '../db.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'appearance.dart';
+import 'about.dart';
 import 'activate.dart';
+import 'admin_branding.dart';
+import 'insights.dart';
 import 'drive_help.dart';
+import '../branding.dart';
 import '../pro.dart';
 import 'accounts.dart';
 import 'categories.dart';
@@ -332,6 +336,16 @@ class _MoreScreenState extends State<MoreScreen> {
       appBar: AppBar(title: const Text('More')),
       body: ListView(
         children: [
+          const _Header('Insights'),
+          ListTile(
+            leading: const Icon(Icons.auto_awesome, color: Colors.amber),
+            title: const Text('Smart Insights & Health Score'),
+            subtitle: const Text('Spending analysis, score, subscriptions'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const InsightsScreen())),
+          ),
+          const Divider(),
           const _Header('Personalize'),
           ListTile(
             leading: const Icon(Icons.palette_outlined),
@@ -453,11 +467,27 @@ class _MoreScreenState extends State<MoreScreen> {
             trailing: const Icon(Icons.open_in_new),
             onTap: _checkUpdate,
           ),
-          const ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('Wallet Pro'),
-            subtitle: Text(
-                'Your data lives only on this phone (and your own Google Drive backups). No ads, no subscriptions.'),
+          ListTile(
+            leading: const Icon(Icons.person_outline),
+            title: const Text('About Developer'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const AboutDeveloperScreen())),
+          ),
+          if (pro.tier == 'business')
+            ListTile(
+              leading: Icon(Icons.admin_panel_settings, color: Theme.of(context).colorScheme.primary),
+              title: const Text('Admin · Branding & Content'),
+              subtitle: const Text('Edit app name, currency, About text'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                      context, MaterialPageRoute(builder: (_) => const AdminBrandingScreen()))
+                  .then((_) => setState(() {})),
+            ),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: Text(branding.appName),
+            subtitle: Text(branding.tagline),
           ),
           const SizedBox(height: 24),
         ],
