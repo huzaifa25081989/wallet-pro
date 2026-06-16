@@ -87,7 +87,7 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                 controller: amtCtl,
                 autofocus: true,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                     labelText: 'Monthly limit',
                     prefixText: '$kCur ',
                     border: OutlineInputBorder()),

@@ -41,7 +41,7 @@ class _LoansScreenState extends State<LoansScreen> {
           controller: ctl,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
               labelText: 'Payment amount', prefixText: '$kCur ', border: OutlineInputBorder()),
         ),
         actions: [
@@ -249,7 +249,7 @@ class _LoanEditState extends State<LoanEdit> {
             TextField(
               controller: principalCtl,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                   labelText: 'Principal amount',
                   prefixText: '$kCur ',
                   border: OutlineInputBorder()),

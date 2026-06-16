@@ -186,7 +186,7 @@ class _AccountEditState extends State<AccountEdit> {
             TextField(
               controller: openCtl,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                   labelText: 'Opening balance',
                   prefixText: '$kCur ',
                   border: OutlineInputBorder()),

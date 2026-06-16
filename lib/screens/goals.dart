@@ -41,7 +41,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
           controller: ctl,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: 'Amount', prefixText: '$kCur '),
+          decoration: InputDecoration(labelText: 'Amount', prefixText: '$kCur '),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
@@ -215,14 +215,14 @@ class _GoalEditState extends State<GoalEdit> {
           TextField(
             controller: targetCtl,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
                 labelText: 'Target amount', prefixText: '$kCur ', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: savedCtl,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
                 labelText: 'Already saved', prefixText: '$kCur ', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 12),

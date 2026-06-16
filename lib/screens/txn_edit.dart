@@ -261,7 +261,7 @@ class _TxnEditState extends State<TxnEdit> {
             controller: amountCtl,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Amount',
               prefixText: '$kCur ',
               border: OutlineInputBorder(),

@@ -211,7 +211,7 @@ class _RecurringEditState extends State<RecurringEdit> {
           TextField(
             controller: amountCtl,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
                 labelText: 'Amount', prefixText: '$kCur ', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
