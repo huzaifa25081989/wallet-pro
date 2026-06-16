@@ -3,17 +3,8 @@ Analyzing wallet-pro...
 
 warning • The include file 'package:flutter_lints/flutter.yaml' in '/home/runner/work/wallet-pro/wallet-pro/analysis_options.yaml' can't be found when analyzing '/home/runner/work/wallet-pro/wallet-pro' • analysis_options.yaml:10:10 • include_file_not_found
 warning • The '!' will have no effect because the receiver can't be null • lib/db.dart:319:52 • unnecessary_non_null_assertion
-  error • Invalid constant value • lib/screens/accounts.dart:191:33 • invalid_constant
-  error • Invalid constant value • lib/screens/budgets.dart:92:35 • invalid_constant
-  error • Invalid constant value • lib/screens/goals.dart:44:80 • invalid_constant
-  error • Invalid constant value • lib/screens/goals.dart:219:59 • invalid_constant
-  error • Invalid constant value • lib/screens/goals.dart:226:59 • invalid_constant
-  error • Invalid constant value • lib/screens/loans.dart:45:58 • invalid_constant
-  error • Invalid constant value • lib/screens/loans.dart:254:33 • invalid_constant
-  error • Invalid constant value • lib/screens/recurring.dart:215:52 • invalid_constant
-  error • Invalid constant value • lib/screens/txn_edit.dart:266:29 • invalid_constant
 
-11 issues found. (ran in 20.6s)
+2 issues found. (ran in 21.1s)
 ===== flutter build apk =====
 
 Running Gradle task 'assembleRelease'...                        
@@ -31,102 +22,6 @@ Preparing "Install Android SDK Platform 33 (revision 3)".
 Installing Android SDK Platform 33 in /usr/local/lib/android/sdk/platforms/android-33
 "Install Android SDK Platform 33 (revision 3)" complete.
 "Install Android SDK Platform 33 (revision 3)" finished.
-lib/screens/budgets.dart:92:35: Error: Not a constant expression.
-                    prefixText: '$kCur ',
-                                  ^^^^
-lib/screens/accounts.dart:191:33: Error: Not a constant expression.
-                  prefixText: '$kCur ',
-                                ^^^^
-lib/screens/txn_edit.dart:266:29: Error: Not a constant expression.
-              prefixText: '$kCur ',
-                            ^^^^
-lib/screens/goals.dart:44:80: Error: Not a constant expression.
-          decoration: const InputDecoration(labelText: 'Amount', prefixText: '$kCur '),
-                                                                               ^^^^
-lib/screens/goals.dart:219:59: Error: Not a constant expression.
-                labelText: 'Target amount', prefixText: '$kCur ', border: OutlineInputBorder()),
-                                                          ^^^^
-lib/screens/goals.dart:226:59: Error: Not a constant expression.
-                labelText: 'Already saved', prefixText: '$kCur ', border: OutlineInputBorder()),
-                                                          ^^^^
-lib/screens/loans.dart:45:58: Error: Not a constant expression.
-              labelText: 'Payment amount', prefixText: '$kCur ', border: OutlineInputBorder()),
-                                                         ^^^^
-lib/screens/loans.dart:254:33: Error: Not a constant expression.
-                  prefixText: '$kCur ',
-                                ^^^^
-lib/screens/recurring.dart:215:52: Error: Not a constant expression.
-                labelText: 'Amount', prefixText: '$kCur ', border: OutlineInputBorder()),
-                                                   ^^^^
-lib/screens/budgets.dart:90:35: Error: Constant evaluation error:
-                decoration: const InputDecoration(
-                                  ^
-lib/screens/budgets.dart:92:35: Context: The invocation of 'kCur' is not allowed in a constant expression.
-                    prefixText: '$kCur ',
-                                  ^
-lib/screens/accounts.dart:189:33: Error: Constant evaluation error:
-              decoration: const InputDecoration(
-                                ^
-lib/screens/accounts.dart:191:33: Context: The invocation of 'kCur' is not allowed in a constant expression.
-                  prefixText: '$kCur ',
-                                ^
-lib/screens/txn_edit.dart:264:31: Error: Constant evaluation error:
-            decoration: const InputDecoration(
-                              ^
-lib/screens/txn_edit.dart:266:29: Context: The invocation of 'kCur' is not allowed in a constant expression.
-              prefixText: '$kCur ',
-                            ^
-lib/screens/goals.dart:44:29: Error: Constant evaluation error:
-          decoration: const InputDecoration(labelText: 'Amount', prefixText: '$kCur '),
-                            ^
-lib/screens/goals.dart:44:80: Context: The invocation of 'kCur' is not allowed in a constant expression.
-          decoration: const InputDecoration(labelText: 'Amount', prefixText: '$kCur '),
-                                                                               ^
-lib/screens/goals.dart:218:31: Error: Constant evaluation error:
-            decoration: const InputDecoration(
-                              ^
-lib/screens/goals.dart:219:59: Context: The invocation of 'kCur' is not allowed in a constant expression.
-                labelText: 'Target amount', prefixText: '$kCur ', border: OutlineInputBorder()),
-                                                          ^
-lib/screens/goals.dart:225:31: Error: Constant evaluation error:
-            decoration: const InputDecoration(
-                              ^
-lib/screens/goals.dart:226:59: Context: The invocation of 'kCur' is not allowed in a constant expression.
-                labelText: 'Already saved', prefixText: '$kCur ', border: OutlineInputBorder()),
-                                                          ^
-lib/screens/loans.dart:44:29: Error: Constant evaluation error:
-          decoration: const InputDecoration(
-                            ^
-lib/screens/loans.dart:45:58: Context: The invocation of 'kCur' is not allowed in a constant expression.
-              labelText: 'Payment amount', prefixText: '$kCur ', border: OutlineInputBorder()),
-                                                         ^
-lib/screens/loans.dart:252:33: Error: Constant evaluation error:
-              decoration: const InputDecoration(
-                                ^
-lib/screens/loans.dart:254:33: Context: The invocation of 'kCur' is not allowed in a constant expression.
-                  prefixText: '$kCur ',
-                                ^
-lib/screens/recurring.dart:214:31: Error: Constant evaluation error:
-            decoration: const InputDecoration(
-                              ^
-lib/screens/recurring.dart:215:52: Context: The invocation of 'kCur' is not allowed in a constant expression.
-                labelText: 'Amount', prefixText: '$kCur ', border: OutlineInputBorder()),
-                                                   ^
-Target kernel_snapshot_program failed: Exception
-
-
-FAILURE: Build failed with an exception.
-
-* What went wrong:
-Execution failed for task ':app:compileFlutterBuildRelease'.
-> Process 'command '/opt/hostedtoolcache/flutter/stable-3.24.5-x64/flutter/bin/flutter'' finished with non-zero exit value 1
-
-* Try:
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to get full insights.
-> Get more help at https://help.gradle.org.
-
-BUILD FAILED in 5m 8s
-Running Gradle task 'assembleRelease'...                          308.6s
-Gradle task assembleRelease failed with exit code 1
+Caught exception: Already watching path: /home/runner/work/wallet-pro/wallet-pro/android
+Running Gradle task 'assembleRelease'...                          419.2s
+✓ Built build/app/outputs/flutter-apk/app-release.apk (26.9MB)
