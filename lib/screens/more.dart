@@ -18,12 +18,14 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'appearance.dart';
 import 'about.dart';
-import 'activate.dart';
 import 'admin_branding.dart';
 import 'insights.dart';
 import 'drive_help.dart';
+import '../updater.dart';
+import 'networth.dart';
+import 'simulator.dart';
+import 'reconcile.dart';
 import '../branding.dart';
-import '../pro.dart';
 import 'accounts.dart';
 import 'categories.dart';
 import 'coa.dart';
@@ -85,6 +87,7 @@ class MoreScreen extends StatefulWidget {
 class _MoreScreenState extends State<MoreScreen> {
   bool autoBackup = false;
   bool busy = false;
+  bool adminUnlocked = false;
   String _version = '';
 
   @override
@@ -92,6 +95,7 @@ class _MoreScreenState extends State<MoreScreen> {
     super.initState();
     _loadPrefs();
     _loadVersion();
+    DB.settingGet('adminUnlocked').then((v) { if (mounted) setState(() => adminUnlocked = v == '1'); });
   }
 
   Future<void> _loadVersion() async {
@@ -101,12 +105,6 @@ class _MoreScreenState extends State<MoreScreen> {
     } catch (_) {}
   }
 
-  Future<void> _checkUpdate() async {
-    final uri = Uri.parse('https://github.com/huzaifa25081989/wallet-pro/releases/latest');
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (mounted) snack(context, 'Could not open the releases page');
-    }
-  }
 
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
@@ -320,7 +318,6 @@ class _MoreScreenState extends State<MoreScreen> {
   }
 
   Future<void> _toggleAuto(bool v) async {
-    if (v && !await requirePro(context, 'Automatic Google Drive backup')) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('autoBackup', v);
     setState(() => autoBackup = v);
@@ -344,6 +341,22 @@ class _MoreScreenState extends State<MoreScreen> {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push(
                 context, MaterialPageRoute(builder: (_) => const InsightsScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.account_balance, color: Colors.indigo),
+            title: const Text('Net Worth dashboard'),
+            subtitle: const Text('Cash, bank, investments, gold, property...'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const NetWorthScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.calculate, color: Colors.deepPurple),
+            title: const Text('What-if Simulator'),
+            subtitle: const Text('"Can I afford a house in 5 years?"'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const SimulatorScreen())),
           ),
           const Divider(),
           const _Header('Personalize'),
@@ -419,6 +432,14 @@ class _MoreScreenState extends State<MoreScreen> {
             subtitle: const Text('Pick the CSV exported from the Wallet app'),
             onTap: busy ? null : () => _run(_importWalletCsv),
           ),
+          ListTile(
+            leading: const Icon(Icons.account_balance_wallet_outlined),
+            title: const Text('Import & reconcile bank statement'),
+            subtitle: const Text('Find what is not yet recorded, add in one tap'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const ReconcileScreen())),
+          ),
           const Divider(),
           const _Header('Google Drive'),
           ListTile(
@@ -449,23 +470,11 @@ class _MoreScreenState extends State<MoreScreen> {
           const Divider(),
           const _Header('App'),
           ListTile(
-            leading: Icon(pro.isPro ? Icons.verified : Icons.workspace_premium,
-                color: Theme.of(context).colorScheme.primary),
-            title: Text(pro.isPro ? 'Wallet Pro — Active' : 'Upgrade to Wallet Pro'),
-            subtitle: Text(pro.isPro
-                ? '${pro.tier.toUpperCase()} · until ${pro.expiryLabel}'
-                : 'Unlock PDF/Excel export & cloud auto-backup'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const ActivateScreen()))
-                .then((_) => setState(() {})),
-          ),
-          ListTile(
             leading: const Icon(Icons.system_update_outlined),
             title: const Text('Check for updates'),
-            subtitle: Text(_version.isEmpty ? 'Wallet Pro' : 'Installed: v$_version'),
-            trailing: const Icon(Icons.open_in_new),
-            onTap: _checkUpdate,
+            subtitle: Text(_version.isEmpty ? 'Update inside the app' : 'Installed: v$_version'),
+            trailing: const Icon(Icons.download_for_offline_outlined),
+            onTap: () => checkForUpdate(context),
           ),
           ListTile(
             leading: const Icon(Icons.person_outline),
@@ -474,7 +483,7 @@ class _MoreScreenState extends State<MoreScreen> {
             onTap: () => Navigator.push(
                 context, MaterialPageRoute(builder: (_) => const AboutDeveloperScreen())),
           ),
-          if (pro.tier == 'business')
+          if (adminUnlocked)
             ListTile(
               leading: Icon(Icons.admin_panel_settings, color: Theme.of(context).colorScheme.primary),
               title: const Text('Admin · Branding & Content'),
@@ -487,7 +496,16 @@ class _MoreScreenState extends State<MoreScreen> {
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: Text(branding.appName),
-            subtitle: Text(branding.tagline),
+            subtitle: Text('${branding.tagline}\nLong-press to toggle admin mode'),
+            isThreeLine: true,
+            onLongPress: () async {
+              adminUnlocked = !adminUnlocked;
+              await DB.settingSet('adminUnlocked', adminUnlocked ? '1' : '0');
+              if (mounted) {
+                setState(() {});
+                snack(context, adminUnlocked ? 'Admin mode ON' : 'Admin mode OFF');
+              }
+            },
           ),
           const SizedBox(height: 24),
         ],

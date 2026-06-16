@@ -31,7 +31,7 @@ jobs:
       - name: Patch AndroidManifest (mic, internet, app name)
         run: |
           M=android/app/src/main/AndroidManifest.xml
-          sed -i 's|<application|<uses-permission android:name="android.permission.RECORD_AUDIO"/>\n    <uses-permission android:name="android.permission.INTERNET"/>\n    <queries><intent><action android:name="android.speech.RecognitionService"/></intent></queries>\n    <application|' $M
+          sed -i 's|<application|<uses-permission android:name="android.permission.RECORD_AUDIO"/>\n    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>\n    <queries><intent><action android:name="android.speech.RecognitionService"/></intent></queries>\n    <application|' $M
           sed -i 's|android:label="wallet_pro"|android:label="Wallet Pro"|' $M
 
       - name: Set Android compile/target SDK to 35 and drop default test
@@ -78,7 +78,7 @@ jobs:
         if: success()
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
-          name: Wallet Pro (latest build)
+          tag_name: v1.0.${{ github.run_number }}
+          name: Wallet Pro v1.0.${{ github.run_number }}
           body: Tap WalletPro.apk below to install on your Android phone.
           files: WalletPro.apk

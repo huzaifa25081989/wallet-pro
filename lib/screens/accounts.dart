@@ -6,7 +6,7 @@ import '../widgets.dart';
 import 'statement.dart';
 import 'txn_edit.dart';
 
-const accountTypes = ['Bank', 'Cash', 'Savings', 'Investment', 'Credit', 'Person', 'Wallet'];
+const accountTypes = ['Bank', 'Cash', 'Savings', 'Investment', 'Credit', 'Person', 'Wallet', 'Crypto', 'Gold', 'Property', 'Vehicle', 'Loan'];
 
 /// Account groups shown as separate sections on the Home screen.
 const accountGroups = ['main', 'people', 'investment'];
