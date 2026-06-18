@@ -283,6 +283,46 @@ class _AccountDetailState extends State<AccountDetail> {
     });
   }
 
+  Future<void> _adjustBalance() async {
+    final ctl = TextEditingController(text: balance.toStringAsFixed(2));
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Adjust balance'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text('Current balance here: ${money(balance)}',
+              style: const TextStyle(fontSize: 13)),
+          const SizedBox(height: 6),
+          const Text(
+              'Enter the correct balance (e.g. the figure from your old app). The opening balance will be set so it matches.',
+              style: TextStyle(fontSize: 12)),
+          const SizedBox(height: 12),
+          TextField(
+            controller: ctl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+            decoration: InputDecoration(
+                labelText: 'Correct balance', prefixText: '$kCur ', border: const OutlineInputBorder()),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Set')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final target = double.tryParse(ctl.text.replaceAll(',', '').trim());
+    if (target == null) return;
+    final currentOpening = ((widget.account['opening'] as num?) ?? 0).toDouble();
+    final newOpening = currentOpening + (target - balance);
+    await DB.update('accounts', {'id': widget.account['id'], 'opening': newOpening});
+    widget.account['opening'] = newOpening;
+    if (mounted) {
+      snack(context, 'Balance set to ${money(target)}');
+      _load();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -299,6 +339,11 @@ class _AccountDetailState extends State<AccountDetail> {
       appBar: AppBar(
         title: Text(widget.account['name'] as String? ?? 'Account'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Adjust balance',
+            onPressed: _adjustBalance,
+          ),
           IconButton(
             icon: const Icon(Icons.description_outlined),
             tooltip: 'Statement',
