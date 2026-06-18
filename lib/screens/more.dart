@@ -164,6 +164,23 @@ class _MoreScreenState extends State<MoreScreen> {
   Future<void> _importWalletCsv() async {
     final res = await FilePicker.platform.pickFiles(type: FileType.any);
     if (res == null || res.files.single.path == null) return;
+
+    // Offer a clean import (clears existing transactions first) so a re-import
+    // after fixing transfers does not create duplicates.
+    final clearFirst = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Import options'),
+        content: const Text(
+            'Do you want to clear existing transactions before importing? Choose "Clear & import" if you are re-importing the same backup.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Just add')),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Clear & import')),
+        ],
+      ),
+    );
+    if (clearFirst == null) return;
+
     try {
       final raw = await File(res.files.single.path!).readAsString();
       final firstLine = raw.split('\n').first;
@@ -174,67 +191,163 @@ class _MoreScreenState extends State<MoreScreen> {
         if (mounted) snack(context, 'No data rows found in that file');
         return;
       }
-      final header =
-          rows.first.map((e) => e.toString().trim().toLowerCase()).toList();
-      int idx(List<String> names) =>
-          header.indexWhere((h) => names.any((n) => h.contains(n)));
+      final header = rows.first.map((e) => e.toString().trim().toLowerCase()).toList();
+      int idx(List<String> names) => header.indexWhere((h) => names.any((n) => h.contains(n)));
       final iAcc = idx(['account']);
       final iCat = idx(['category']);
       final iAmt = idx(['amount']);
       final iDate = idx(['date']);
       final iNote = idx(['note', 'payee', 'description', 'label']);
       final iType = idx(['type']);
+      final iTransfer = idx(['transfer']); // some exports have a transfer flag/partner
       if (iAmt < 0) {
         if (mounted) snack(context, 'No "amount" column found \u2014 is this a Wallet CSV export?');
         return;
       }
 
-      final d = await DB.db;
-      int n = 0;
+      String cell(List r, int i) =>
+          (i >= 0 && r.length > i) ? r[i].toString().trim() : '';
+
+      // Parse into structured records first.
+      final normal = <Map<String, Object?>>[];
+      final transfers = <Map<String, Object?>>[]; // {acc, amt(signed), date, note}
       for (final r in rows.skip(1)) {
         if (r.length <= iAmt) continue;
-        final amtRaw =
-            r[iAmt].toString().replaceAll(',', '').replaceAll(' ', '').trim();
+        final amtRaw = r[iAmt].toString().replaceAll(',', '').replaceAll(' ', '').trim();
         final amt = double.tryParse(amtRaw);
         if (amt == null || amt == 0) continue;
 
-        String type = amt < 0 ? 'expense' : 'income';
-        if (iType >= 0) {
-          final t = r[iType].toString().toLowerCase();
-          if (t.contains('exp')) type = 'expense';
-          if (t.contains('inc')) type = 'income';
-          // Wallet exports transfers as two rows (one per account);
-          // we import each by its amount sign so balances stay correct.
-          if (t.contains('trans')) type = amt < 0 ? 'expense' : 'income';
+        final typeText = cell(r, iType).toLowerCase();
+        final catText = cell(r, iCat);
+        final transferText = cell(r, iTransfer).toLowerCase();
+        final isTransfer = typeText.contains('trans') ||
+            catText.toLowerCase().contains('transfer') ||
+            transferText == 'true' ||
+            transferText == '1' ||
+            (transferText.isNotEmpty && transferText != 'false' && transferText != '0' && iType < 0 && iTransfer >= 0);
+
+        final accName = cell(r, iAcc).isNotEmpty ? cell(r, iAcc) : 'Imported';
+        final note = cell(r, iNote);
+        final date = iDate >= 0 ? _parseDate(cell(r, iDate)) : DateTime.now().toIso8601String();
+
+        if (isTransfer) {
+          transfers.add({'acc': accName, 'amt': amt, 'date': date, 'note': note});
+        } else {
+          String type = amt < 0 ? 'expense' : 'income';
+          if (typeText.contains('exp')) type = 'expense';
+          if (typeText.contains('inc')) type = 'income';
+          normal.add({
+            'acc': accName,
+            'amt': amt.abs(),
+            'type': type,
+            'cat': catText.isNotEmpty ? catText : (type == 'income' ? 'Other Income' : 'Other Expense'),
+            'date': date,
+            'note': note,
+          });
         }
+      }
 
-        final accName = iAcc >= 0 && r.length > iAcc && r[iAcc].toString().trim().isNotEmpty
-            ? r[iAcc].toString().trim()
-            : 'Imported';
-        final catName = iCat >= 0 && r.length > iCat && r[iCat].toString().trim().isNotEmpty
-            ? r[iCat].toString().trim()
-            : (type == 'income' ? 'Other Income' : 'Other Expense');
-        final accountId = await DB.accountByName(accName);
-        final categoryId = await DB.catByName(catName, type);
-        final date = iDate >= 0 && r.length > iDate
-            ? _parseDate(r[iDate].toString())
-            : DateTime.now().toIso8601String();
-        final note =
-            iNote >= 0 && r.length > iNote ? r[iNote].toString().trim() : '';
+      final d = await DB.db;
+      if (clearFirst) {
+        await d.delete('txns');
+      }
 
+      int n = 0;
+      // Insert normal income/expense
+      for (final m in normal) {
+        final accountId = await DB.accountByName(m['acc'] as String);
+        final categoryId = await DB.catByName(m['cat'] as String, m['type'] as String);
         await d.insert('txns', {
-          'type': type,
-          'amount': amt.abs(),
+          'type': m['type'],
+          'amount': m['amt'],
           'accountId': accountId,
           'toAccountId': null,
           'categoryId': categoryId,
-          'date': date,
-          'note': note,
+          'date': m['date'],
+          'note': m['note'],
         });
         n++;
       }
+
+      // Pair transfer legs: outgoing (amt<0) with incoming (amt>0) by amount+date.
+      final outs = transfers.where((t) => (t['amt'] as double) < 0).toList();
+      final ins = transfers.where((t) => (t['amt'] as double) > 0).toList();
+      final usedIn = <int>{};
+      String dayKey(String iso) {
+        final dt = DateTime.tryParse(iso);
+        return dt == null ? iso : '${dt.year}-${dt.month}-${dt.day}';
+      }
+      for (final o in outs) {
+        final amt = (o['amt'] as double).abs();
+        final oDay = dayKey(o['date'] as String);
+        int match = -1;
+        for (int k = 0; k < ins.length; k++) {
+          if (usedIn.contains(k)) continue;
+          if (((ins[k]['amt'] as double) - amt).abs() < 0.01 &&
+              dayKey(ins[k]['date'] as String) == oDay) {
+            match = k;
+            break;
+          }
+        }
+        // relax to amount-only if no same-day match
+        if (match < 0) {
+          for (int k = 0; k < ins.length; k++) {
+            if (usedIn.contains(k)) continue;
+            if (((ins[k]['amt'] as double) - amt).abs() < 0.01) {
+              match = k;
+              break;
+            }
+          }
+        }
+        if (match >= 0) {
+          usedIn.add(match);
+          final fromId = await DB.accountByName(o['acc'] as String);
+          final toId = await DB.accountByName(ins[match]['acc'] as String);
+          await d.insert('txns', {
+            'type': 'transfer',
+            'amount': amt,
+            'accountId': fromId,
+            'toAccountId': toId,
+            'categoryId': null,
+            'date': o['date'],
+            'note': o['note'],
+          });
+          n++;
+        } else {
+          // unpaired outgoing -> expense fallback
+          final accountId = await DB.accountByName(o['acc'] as String);
+          final categoryId = await DB.catByName('Other Expense', 'expense');
+          await d.insert('txns', {
+            'type': 'expense',
+            'amount': amt,
+            'accountId': accountId,
+            'toAccountId': null,
+            'categoryId': categoryId,
+            'date': o['date'],
+            'note': o['note'],
+          });
+          n++;
+        }
+      }
+      // any unpaired incoming -> income fallback
+      for (int k = 0; k < ins.length; k++) {
+        if (usedIn.contains(k)) continue;
+        final accountId = await DB.accountByName(ins[k]['acc'] as String);
+        final categoryId = await DB.catByName('Other Income', 'income');
+        await d.insert('txns', {
+          'type': 'income',
+          'amount': (ins[k]['amt'] as double).abs(),
+          'accountId': accountId,
+          'toAccountId': null,
+          'categoryId': categoryId,
+          'date': ins[k]['date'],
+          'note': ins[k]['note'],
+        });
+        n++;
+      }
+
       bus.ping();
-      if (mounted) snack(context, 'Imported $n records \u2714');
+      if (mounted) snack(context, 'Imported $n records \u2714 (transfers linked)');
     } catch (e) {
       if (mounted) snack(context, 'Import failed: could not parse that file');
     }
