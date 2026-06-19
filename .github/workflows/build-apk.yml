@@ -39,6 +39,7 @@ jobs:
           G=android/app/build.gradle
           sed -i 's|flutter.compileSdkVersion|35|g' $G
           sed -i 's|flutter.targetSdkVersion|35|g' $G
+          sed -i 's|flutter.minSdkVersion|23|g' $G
           rm -f test/widget_test.dart
 
       - name: Use persistent signing key (stable app identity)

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'db.dart';
 import 'branding.dart';
+import 'cloud.dart';
 import 'pro.dart';
 import 'theme.dart';
 import 'screens/budgets.dart';
@@ -32,6 +33,7 @@ class _WalletAppState extends State<WalletApp> {
     await theme.load();
     await pro.load();
     await branding.load();
+    await cloud.init(); // optional Firebase cloud backup (safe if offline)
     await DB.runRecurring(); // post any due recurring payments
   }
 

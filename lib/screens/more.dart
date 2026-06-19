@@ -26,6 +26,8 @@ import 'networth.dart';
 import 'simulator.dart';
 import 'reconcile.dart';
 import 'setbalances.dart';
+import 'cloud.dart';
+import '../cloud.dart';
 import '../branding.dart';
 import 'accounts.dart';
 import 'categories.dart';
@@ -606,7 +608,23 @@ class _MoreScreenState extends State<MoreScreen> {
                 context, MaterialPageRoute(builder: (_) => const SetBalancesScreen())),
           ),
           const Divider(),
-          const _Header('Backup to cloud'),
+          const _Header('Cloud account (recommended)'),
+          ListenableBuilder(
+            listenable: cloud,
+            builder: (_, __) => ListTile(
+              leading: Icon(cloud.signedIn ? Icons.cloud_done : Icons.cloud_outlined,
+                  color: cloud.signedIn ? Colors.green : Theme.of(context).colorScheme.primary),
+              title: Text(cloud.signedIn ? 'Cloud backup is ON' : 'Set up cloud backup (free)'),
+              subtitle: Text(cloud.signedIn
+                  ? '${cloud.email} · auto-syncs every change'
+                  : 'Email sign-in — restore on any phone, never lose data'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                  context, MaterialPageRoute(builder: (_) => const CloudScreen())),
+            ),
+          ),
+          const Divider(),
+          const _Header('Manual backup files'),
           ListTile(
             leading: const Icon(Icons.backup_outlined),
             title: const Text('Back up now (save & share)'),
