@@ -16,6 +16,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   String period = 'month';
   String breakdownType = 'expense';
   int? accountId;
+  String? label;
+  List<String> allLabels = [];
   DateTime from = DateTime(DateTime.now().year, DateTime.now().month, 1);
   DateTime to = DateTime.now();
 
@@ -41,6 +43,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   Future<void> _init() async {
     accounts = await DB.accounts();
+    allLabels = await DB.distinctLabels();
     await _load();
   }
 
@@ -76,7 +79,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Future<void> _load() async {
     if (period != 'custom') _applyPeriod();
     final toExcl = _iso(to.add(const Duration(days: 1)));
-    final rows = await DB.analyticsTxns(_iso(from), toExcl, accountId: accountId);
+    final rows = await DB.analyticsTxns(_iso(from), toExcl, accountId: accountId, label: label);
     double inc = 0, exp = 0;
     final ct = <String, double>{};
     final cc = <String, int>{};
@@ -94,7 +97,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     // MoM last 6 months
     final now = DateTime.now();
     final start6 = DateTime(now.year, now.month - 5, 1);
-    final rows6 = await DB.analyticsTxns(_iso(start6), _iso(now.add(const Duration(days: 1))), accountId: accountId);
+    final rows6 = await DB.analyticsTxns(_iso(start6), _iso(now.add(const Duration(days: 1))), accountId: accountId, label: label);
     final buckets = <String, List<double>>{};
     for (int i = 5; i >= 0; i--) {
       final m = DateTime(now.year, now.month - i, 1);
@@ -212,6 +215,29 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     ),
                   ),
                 ]),
+                if (allLabels.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    const Icon(Icons.label_outline, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButton<String?>(
+                        value: label,
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                        items: [
+                          const DropdownMenuItem(value: null, child: Text('All labels')),
+                          for (final l in allLabels)
+                            DropdownMenuItem(value: l, child: Text(l)),
+                        ],
+                        onChanged: (v) {
+                          setState(() => label = v);
+                          _load();
+                        },
+                      ),
+                    ),
+                  ]),
+                ],
                 const SizedBox(height: 6),
                 // KPI cards
                 Row(children: [

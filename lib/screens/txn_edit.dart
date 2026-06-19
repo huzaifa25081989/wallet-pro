@@ -24,6 +24,7 @@ class _TxnEditState extends State<TxnEdit> {
   String type = 'expense';
   final amountCtl = TextEditingController();
   final noteCtl = TextEditingController();
+  final labelsCtl = TextEditingController();
   int? accountId, toAccountId, categoryId;
   DateTime date = DateTime.now();
   List<Map<String, Object?>> accounts = [], cats = [];
@@ -49,6 +50,7 @@ class _TxnEditState extends State<TxnEdit> {
       type = t['type'] as String? ?? 'expense';
       amountCtl.text = '${(t['amount'] as num?) ?? ''}';
       noteCtl.text = t['note'] as String? ?? '';
+      labelsCtl.text = t['labels'] as String? ?? '';
       accountId = t['accountId'] as int?;
       toAccountId = t['toAccountId'] as int?;
       categoryId = t['categoryId'] as int?;
@@ -168,6 +170,7 @@ class _TxnEditState extends State<TxnEdit> {
       'categoryId': type == 'transfer' ? null : categoryId,
       'date': date.toIso8601String(),
       'note': noteCtl.text.trim(),
+      'labels': labelsCtl.text.trim(),
     };
     if (widget.txn == null) {
       await DB.insert('txns', m);
@@ -338,6 +341,15 @@ class _TxnEditState extends State<TxnEdit> {
             controller: noteCtl,
             decoration: const InputDecoration(
                 labelText: 'Note (optional)', border: OutlineInputBorder()),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: labelsCtl,
+            decoration: const InputDecoration(
+                labelText: 'Labels / tags (comma separated)',
+                hintText: 'e.g. Trip, Family, Reimbursable',
+                prefixIcon: Icon(Icons.label_outline),
+                border: OutlineInputBorder()),
           ),
           const SizedBox(height: 20),
           FilledButton(

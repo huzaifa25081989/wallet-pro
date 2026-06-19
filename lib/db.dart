@@ -16,7 +16,7 @@ class DB {
 
   static Future<Database> _open() async {
     final path = p.join(await getDatabasesPath(), 'wallet_pro.db');
-    return openDatabase(path, version: 3, onCreate: _create, onUpgrade: _upgrade);
+    return openDatabase(path, version: 4, onCreate: _create, onUpgrade: _upgrade);
   }
 
   static Future<void> _create(Database d, int v) async {
@@ -25,7 +25,7 @@ class DB {
     await d.execute(
         'CREATE TABLE cats(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, archived INTEGER DEFAULT 0)');
     await d.execute(
-        'CREATE TABLE txns(id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, amount REAL, accountId INTEGER, toAccountId INTEGER, categoryId INTEGER, date TEXT, note TEXT)');
+        'CREATE TABLE txns(id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, amount REAL, accountId INTEGER, toAccountId INTEGER, categoryId INTEGER, date TEXT, note TEXT, labels TEXT)');
     await d.execute(
         'CREATE TABLE loans(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, principal REAL, rate REAL, dueDate TEXT, paid REAL DEFAULT 0, note TEXT)');
     await d.execute(
@@ -69,6 +69,11 @@ class DB {
       try {
         await d.execute(
             "UPDATE accounts SET grp = CASE WHEN type='Investment' THEN 'investment' WHEN type='Person' THEN 'people' ELSE 'main' END");
+      } catch (_) {}
+    }
+    if (from < 4) {
+      try {
+        await d.execute('ALTER TABLE txns ADD COLUMN labels TEXT');
       } catch (_) {}
     }
   }
@@ -434,21 +439,52 @@ class DB {
       WHERE t.date>=? AND t.date<? ORDER BY t.date ASC''', [fromIso, toIso]);
   }
 
+  /// All distinct labels used across transactions.
+  static Future<List<String>> distinctLabels() async {
+    final rows = await (await db)
+        .rawQuery("SELECT labels FROM txns WHERE labels IS NOT NULL AND labels<>''");
+    final set = <String>{};
+    for (final r in rows) {
+      for (final l in (r['labels'] as String).split(',')) {
+        final t = l.trim();
+        if (t.isNotEmpty) set.add(t);
+      }
+    }
+    final list = set.toList()..sort();
+    return list;
+  }
+
   /// Income/expense transactions in a window for analytics, with category info,
   /// optionally filtered to one account. Transfers are excluded.
   static Future<List<Map<String, Object?>>> analyticsTxns(
-      String fromIso, String toIso, {int? accountId}) async {
+      String fromIso, String toIso, {int? accountId, String? label}) async {
     final where = StringBuffer("t.date>=? AND t.date<? AND t.type IN ('income','expense')");
     final args = <Object?>[fromIso, toIso];
     if (accountId != null) {
       where.write(' AND t.accountId=?');
       args.add(accountId);
     }
+    if (label != null && label.isNotEmpty) {
+      where.write(" AND (','||replace(t.labels,', ',',')||',') LIKE ?");
+      args.add('%,$label,%');
+    }
     return (await db).rawQuery('''
-      SELECT t.type, t.amount, t.categoryId, t.date, t.accountId,
+      SELECT t.type, t.amount, t.categoryId, t.date, t.accountId, t.labels,
              c.name catName, c.color catColor, c.icon catIcon
       FROM txns t LEFT JOIN cats c ON c.id=t.categoryId
       WHERE $where ORDER BY t.date ASC''', args);
+  }
+
+  /// Most recent [n] transactions with category + account names, for the dashboard.
+  static Future<List<Map<String, Object?>>> recentTxns(int n) async {
+    return (await db).rawQuery('''
+      SELECT t.*, c.name catName, c.icon catIcon, c.color catColor,
+             af.name fromName, at.name toName
+      FROM txns t
+      LEFT JOIN cats c ON c.id=t.categoryId
+      LEFT JOIN accounts af ON af.id=t.accountId
+      LEFT JOIN accounts at ON at.id=t.toAccountId
+      ORDER BY t.date DESC, t.id DESC LIMIT ?''', [n]);
   }
 
   // ---------- get-or-create (used by CSV import) ----------
