@@ -36,19 +36,38 @@ import 'recurring.dart';
 
 final _gsi = GoogleSignIn(scopes: [gd.DriveApi.driveAppdataScope]);
 
-/// Called on app start. Backs up to Drive once a day if enabled.
+/// Writes a JSON backup to a stable folder on the device. No sign-in needed.
+Future<String?> writeLocalBackup() async {
+  try {
+    final base = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
+    final dir = Directory('${base.path}/WalletProBackups');
+    if (!await dir.exists()) await dir.create(recursive: true);
+    final stamp = DateTime.now().toIso8601String().substring(0, 10);
+    final f = File('${dir.path}/wallet_pro_backup_$stamp.json');
+    await f.writeAsString(jsonEncode(await DB.dump()), flush: true);
+    // keep only the latest 10 dated backups
+    final files = dir.listSync().whereType<File>().where((e) => e.path.endsWith('.json')).toList()
+      ..sort((a, b) => b.path.compareTo(a.path));
+    for (final old in files.skip(10)) {
+      try { old.deleteSync(); } catch (_) {}
+    }
+    return f.path;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Called on app start. Saves a local backup once a day if enabled. Never errors.
 Future<void> tryAutoBackup() async {
   try {
     final prefs = await SharedPreferences.getInstance();
     if (!(prefs.getBool('autoBackup') ?? false)) return;
     final last = prefs.getInt('lastBackup') ?? 0;
     if (DateTime.now().millisecondsSinceEpoch - last < 20 * 3600 * 1000) return;
-    final acct = await _gsi.signInSilently();
-    if (acct == null) return;
-    final client = await _gsi.authenticatedClient();
-    if (client == null) return;
-    await _upload(gd.DriveApi(client));
-    await prefs.setInt('lastBackup', DateTime.now().millisecondsSinceEpoch);
+    final path = await writeLocalBackup();
+    if (path != null) {
+      await prefs.setInt('lastBackup', DateTime.now().millisecondsSinceEpoch);
+    }
   } catch (_) {
     // Silent: auto-backup must never crash the app.
   }
@@ -201,6 +220,7 @@ class _MoreScreenState extends State<MoreScreen> {
       final iNote = idx(['note', 'payee', 'description', 'label']);
       final iType = idx(['type']);
       final iTransfer = idx(['transfer']); // some exports have a transfer flag/partner
+      final iLabels = idx(['labels']);
       if (iAmt < 0) {
         if (mounted) snack(context, 'No "amount" column found \u2014 is this a Wallet CSV export?');
         return;
@@ -244,6 +264,7 @@ class _MoreScreenState extends State<MoreScreen> {
             'cat': catText.isNotEmpty ? catText : (type == 'income' ? 'Other Income' : 'Other Expense'),
             'date': date,
             'note': note,
+            'labels': cell(r, iLabels),
           });
         }
       }
@@ -266,6 +287,7 @@ class _MoreScreenState extends State<MoreScreen> {
           'categoryId': categoryId,
           'date': m['date'],
           'note': m['note'],
+          'labels': m['labels'],
         });
         n++;
       }
@@ -315,32 +337,32 @@ class _MoreScreenState extends State<MoreScreen> {
           });
           n++;
         } else {
-          // unpaired outgoing -> expense fallback
+          // unpaired outgoing -> transfer to suspense account (NEVER expense/income)
           final accountId = await DB.accountByName(o['acc'] as String);
-          final categoryId = await DB.catByName('Other Expense', 'expense');
+          final clearingId = await DB.accountByName('Transfers (other side)');
           await d.insert('txns', {
-            'type': 'expense',
+            'type': 'transfer',
             'amount': amt,
             'accountId': accountId,
-            'toAccountId': null,
-            'categoryId': categoryId,
+            'toAccountId': clearingId,
+            'categoryId': null,
             'date': o['date'],
             'note': o['note'],
           });
           n++;
         }
       }
-      // any unpaired incoming -> income fallback
+      // any unpaired incoming -> transfer FROM suspense account (NEVER income)
       for (int k = 0; k < ins.length; k++) {
         if (usedIn.contains(k)) continue;
         final accountId = await DB.accountByName(ins[k]['acc'] as String);
-        final categoryId = await DB.catByName('Other Income', 'income');
+        final clearingId = await DB.accountByName('Transfers (other side)');
         await d.insert('txns', {
-          'type': 'income',
+          'type': 'transfer',
           'amount': (ins[k]['amt'] as double).abs(),
-          'accountId': accountId,
-          'toAccountId': null,
-          'categoryId': categoryId,
+          'accountId': clearingId,
+          'toAccountId': accountId,
+          'categoryId': null,
           'date': ins[k]['date'],
           'note': ins[k]['note'],
         });
@@ -359,7 +381,8 @@ class _MoreScreenState extends State<MoreScreen> {
     try {
       final api = await _driveApi();
       if (api == null) {
-        if (mounted) snack(context, 'Google sign-in cancelled');
+        // sign-in unavailable -> just save locally + share, no error
+        await _localBackupAndShare();
         return;
       }
       await _upload(api);
@@ -367,7 +390,22 @@ class _MoreScreenState extends State<MoreScreen> {
       await prefs.setInt('lastBackup', DateTime.now().millisecondsSinceEpoch);
       if (mounted) snack(context, 'Backed up to Google Drive \u2714');
     } catch (e) {
-      if (mounted) _showDriveError('backup', e.toString());
+      // Auto-resolve: Drive not set up -> save a local backup and open share sheet.
+      await _localBackupAndShare();
+    }
+  }
+
+  Future<void> _localBackupAndShare() async {
+    final path = await writeLocalBackup();
+    if (path != null) {
+      if (mounted) {
+        snack(context, 'Saved a backup on your phone & opened sharing (Drive sign-in not set up)');
+      }
+      try {
+        await Share.shareXFiles([XFile(path)], text: 'Wallet Pro backup');
+      } catch (_) {}
+    } else if (mounted) {
+      snack(context, 'Could not write backup file');
     }
   }
 
@@ -436,8 +474,13 @@ class _MoreScreenState extends State<MoreScreen> {
     await prefs.setBool('autoBackup', v);
     setState(() => autoBackup = v);
     if (v) {
-      snack(context, 'Auto backup enabled \u2014 backs up to Drive once a day on app open');
-      _run(_driveBackup);
+      final path = await writeLocalBackup();
+      await prefs.setInt('lastBackup', DateTime.now().millisecondsSinceEpoch);
+      if (mounted) {
+        snack(context, path != null
+            ? 'Auto backup on \u2014 saves a backup file on your phone daily'
+            : 'Auto backup on');
+      }
     }
   }
 
@@ -563,10 +606,17 @@ class _MoreScreenState extends State<MoreScreen> {
                 context, MaterialPageRoute(builder: (_) => const SetBalancesScreen())),
           ),
           const Divider(),
-          const _Header('Google Drive'),
+          const _Header('Backup to cloud'),
+          ListTile(
+            leading: const Icon(Icons.backup_outlined),
+            title: const Text('Back up now (save & share)'),
+            subtitle: const Text('Saves a file on your phone, then lets you send it anywhere'),
+            onTap: busy ? null : () => _run(_localBackupAndShare),
+          ),
           ListTile(
             leading: const Icon(Icons.cloud_upload_outlined),
-            title: const Text('Back up to Google Drive now'),
+            title: const Text('Back up to Google Drive (optional)'),
+            subtitle: const Text('Needs one-time Drive setup; falls back to file if not set up'),
             onTap: busy ? null : () => _run(_driveBackup),
           ),
           ListTile(
@@ -577,14 +627,14 @@ class _MoreScreenState extends State<MoreScreen> {
           SwitchListTile(
             secondary: const Icon(Icons.schedule_outlined),
             title: const Text('Auto backup daily'),
-            subtitle: const Text('Backs up to Drive when you open the app'),
+            subtitle: const Text('Saves a backup file on your phone once a day (no sign-in needed)'),
             value: autoBackup,
             onChanged: _toggleAuto,
           ),
           ListTile(
             leading: const Icon(Icons.help_outline),
             title: const Text('Google Drive setup help'),
-            subtitle: const Text('Fix sign-in / backup errors'),
+            subtitle: const Text('Only if you want automatic Drive sync'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push(
                 context, MaterialPageRoute(builder: (_) => const DriveHelpScreen())),
