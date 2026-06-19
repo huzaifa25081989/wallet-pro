@@ -434,6 +434,23 @@ class DB {
       WHERE t.date>=? AND t.date<? ORDER BY t.date ASC''', [fromIso, toIso]);
   }
 
+  /// Income/expense transactions in a window for analytics, with category info,
+  /// optionally filtered to one account. Transfers are excluded.
+  static Future<List<Map<String, Object?>>> analyticsTxns(
+      String fromIso, String toIso, {int? accountId}) async {
+    final where = StringBuffer("t.date>=? AND t.date<? AND t.type IN ('income','expense')");
+    final args = <Object?>[fromIso, toIso];
+    if (accountId != null) {
+      where.write(' AND t.accountId=?');
+      args.add(accountId);
+    }
+    return (await db).rawQuery('''
+      SELECT t.type, t.amount, t.categoryId, t.date, t.accountId,
+             c.name catName, c.color catColor, c.icon catIcon
+      FROM txns t LEFT JOIN cats c ON c.id=t.categoryId
+      WHERE $where ORDER BY t.date ASC''', args);
+  }
+
   // ---------- get-or-create (used by CSV import) ----------
   static Future<int> accountByName(String name) async {
     final d = await db;

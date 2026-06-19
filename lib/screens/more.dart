@@ -25,6 +25,7 @@ import '../updater.dart';
 import 'networth.dart';
 import 'simulator.dart';
 import 'reconcile.dart';
+import 'setbalances.dart';
 import '../branding.dart';
 import 'accounts.dart';
 import 'categories.dart';
@@ -552,6 +553,14 @@ class _MoreScreenState extends State<MoreScreen> {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push(
                 context, MaterialPageRoute(builder: (_) => const ReconcileScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.tune),
+            title: const Text('Set account balances'),
+            subtitle: const Text('Enter correct balances (fixes opening balances)'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const SetBalancesScreen())),
           ),
           const Divider(),
           const _Header('Google Drive'),

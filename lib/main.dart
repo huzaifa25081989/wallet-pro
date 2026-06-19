@@ -6,7 +6,7 @@ import 'theme.dart';
 import 'screens/budgets.dart';
 import 'screens/home.dart';
 import 'screens/more.dart';
-import 'screens/reports.dart';
+import 'screens/analytics.dart';
 import 'screens/txns.dart';
 
 void main() {
@@ -72,7 +72,7 @@ class _ShellState extends State<Shell> {
       body: IndexedStack(index: i, children: const [
         HomeScreen(),
         TxnsScreen(),
-        ReportsScreen(),
+        AnalyticsScreen(),
         BudgetsScreen(),
         MoreScreen(),
       ]),
@@ -82,7 +82,7 @@ class _ShellState extends State<Shell> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: 'Records'),
-          NavigationDestination(icon: Icon(Icons.pie_chart_outline), selectedIcon: Icon(Icons.pie_chart), label: 'Reports'),
+          NavigationDestination(icon: Icon(Icons.insights_outlined), selectedIcon: Icon(Icons.insights), label: 'Analytics'),
           NavigationDestination(icon: Icon(Icons.savings_outlined), selectedIcon: Icon(Icons.savings), label: 'Budgets'),
           NavigationDestination(icon: Icon(Icons.menu), label: 'More'),
         ],

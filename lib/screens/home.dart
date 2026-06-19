@@ -3,6 +3,7 @@ import '../db.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'accounts.dart';
+import 'analytics.dart';
 import 'txn_edit.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -14,6 +15,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, Object?>> accounts = [];
   Map<int, double> bals = {};
+  double monthIncome = 0, monthExpense = 0;
+  List<Map<String, Object?>> topCats = [];
 
   @override
   void initState() {
@@ -31,10 +34,19 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _load() async {
     final a = await DB.accounts();
     final b = await DB.balances();
+    final now = DateTime.now();
+    final from = DateTime(now.year, now.month, 1).toIso8601String();
+    final to = DateTime(now.year, now.month + 1, 1).toIso8601String();
+    final inc = await DB.totalFor('income', from, to);
+    final exp = await DB.totalFor('expense', from, to);
+    final cats = await DB.catTotals('expense', from, to);
     if (!mounted) return;
     setState(() {
       accounts = a;
       bals = b;
+      monthIncome = inc;
+      monthExpense = exp;
+      topCats = cats.take(3).toList();
     });
   }
 
@@ -130,6 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+            _monthCard(context),
             ..._groupSections(context),
             const SizedBox(height: 100),
           ],
@@ -137,6 +150,86 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  Widget _monthCard(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final net = monthIncome - monthExpense;
+    final topMax = topCats.isEmpty ? 1.0 : ((topCats.first['s'] as num?) ?? 1).toDouble();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('This month', style: Theme.of(context).textTheme.titleMedium),
+          GestureDetector(
+            onTap: () => _open(const AnalyticsScreen()),
+            child: Row(children: [
+              Text('Analytics', style: TextStyle(color: cs.primary, fontWeight: FontWeight.w600, fontSize: 13)),
+              Icon(Icons.chevron_right, size: 18, color: cs.primary),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        Row(children: [
+          _miniStat('Income', monthIncome, const [Color(0xFF11998E), Color(0xFF38EF7D)]),
+          const SizedBox(width: 8),
+          _miniStat('Expense', monthExpense, const [Color(0xFFEB3349), Color(0xFFF45C43)]),
+          const SizedBox(width: 8),
+          _miniStat('Net', net, const [Color(0xFF1A2980), Color(0xFF26D0CE)]),
+        ]),
+        if (topCats.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Text('Top spending', style: TextStyle(color: cs.outline, fontSize: 12, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          for (final c in topCats)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(children: [
+                CircleAvatar(radius: 13, backgroundColor: Color((c['col'] as int?) ?? 0xFF9E9E9E),
+                    child: Icon(iconOf(c['ic']), color: Colors.white, size: 14)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text(c['n'] as String? ?? '', style: const TextStyle(fontSize: 13)),
+                      Text(money((c['s'] as num?) ?? 0), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    ]),
+                    const SizedBox(height: 3),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: (((c['s'] as num?) ?? 0).toDouble() / topMax).clamp(0.0, 1.0),
+                        minHeight: 6,
+                        color: Color((c['col'] as int?) ?? 0xFF9E9E9E),
+                        backgroundColor: cs.surfaceContainerHighest,
+                      ),
+                    ),
+                  ]),
+                ),
+              ]),
+            ),
+        ],
+      ]),
+    );
+  }
+
+  Widget _miniStat(String label, double v, List<Color> grad) => Expanded(
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: grad, begin: Alignment.topLeft, end: Alignment.bottomRight),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+            const SizedBox(height: 3),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(money(v), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+            ),
+          ]),
+        ),
+      );
 
   List<Widget> _groupSections(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
