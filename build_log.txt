@@ -12,7 +12,7 @@ warning • Unused import: 'package:url_launcher/url_launcher.dart' • lib/scre
    info • A value for optional parameter 'selected' isn't ever given • lib/screens/reconcile.dart:16:49 • unused_element
    info • A value for optional parameter 'duplicate' isn't ever given • lib/screens/reconcile.dart:16:71 • unused_element
 
-10 issues found. (ran in 19.8s)
+10 issues found. (ran in 20.0s)
 ===== flutter build apk =====
 
 Running Gradle task 'assembleRelease'...                        
@@ -31,5 +31,5 @@ Installing Android SDK Platform 33 in /usr/local/lib/android/sdk/platforms/andro
 "Install Android SDK Platform 33 (revision 3)" complete.
 "Install Android SDK Platform 33 (revision 3)" finished.
 Caught exception: Already watching path: /home/runner/work/wallet-pro/wallet-pro/android
-Running Gradle task 'assembleRelease'...                          421.6s
-✓ Built build/app/outputs/flutter-apk/app-release.apk (27.3MB)
+Running Gradle task 'assembleRelease'...                          389.7s
+✓ Built build/app/outputs/flutter-apk/app-release.apk (27.4MB)
