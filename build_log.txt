@@ -3,11 +3,13 @@ Analyzing wallet-pro...
 
 warning • The include file 'package:flutter_lints/flutter.yaml' in '/home/runner/work/wallet-pro/wallet-pro/analysis_options.yaml' can't be found when analyzing '/home/runner/work/wallet-pro/wallet-pro' • analysis_options.yaml:10:10 • include_file_not_found
 warning • The '!' will have no effect because the receiver can't be null • lib/db.dart:319:52 • unnecessary_non_null_assertion
+warning • Unused import: '../theme.dart' • lib/screens/analytics.dart:5:8 • unused_import
+warning • The value of the local variable 'cs' isn't used • lib/screens/analytics.dart:142:11 • unused_local_variable
 warning • Unused import: 'package:url_launcher/url_launcher.dart' • lib/screens/more.dart:14:8 • unused_import
    info • A value for optional parameter 'selected' isn't ever given • lib/screens/reconcile.dart:16:49 • unused_element
    info • A value for optional parameter 'duplicate' isn't ever given • lib/screens/reconcile.dart:16:71 • unused_element
 
-5 issues found. (ran in 20.1s)
+7 issues found. (ran in 19.4s)
 ===== flutter build apk =====
 
 Running Gradle task 'assembleRelease'...                        
@@ -26,5 +28,5 @@ Installing Android SDK Platform 33 in /usr/local/lib/android/sdk/platforms/andro
 "Install Android SDK Platform 33 (revision 3)" complete.
 "Install Android SDK Platform 33 (revision 3)" finished.
 Caught exception: Already watching path: /home/runner/work/wallet-pro/wallet-pro/android
-Running Gradle task 'assembleRelease'...                          434.6s
-✓ Built build/app/outputs/flutter-apk/app-release.apk (27.1MB)
+Running Gradle task 'assembleRelease'...                          427.6s
+✓ Built build/app/outputs/flutter-apk/app-release.apk (27.2MB)
