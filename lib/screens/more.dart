@@ -36,6 +36,7 @@ import '../branding.dart';
 import 'accounts.dart';
 import 'categories.dart';
 import 'coa.dart';
+import 'coa_manage.dart';
 import 'goals.dart';
 import 'loans.dart';
 import 'recurring.dart';
@@ -575,10 +576,19 @@ class _MoreScreenState extends State<MoreScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.account_tree_outlined),
-            title: const Text('Chart of Accounts'),
+            title: const Text('Chart of Accounts (position)'),
+            subtitle: const Text('Assets, liabilities, income & expense totals'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push(
                 context, MaterialPageRoute(builder: (_) => const CoaScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.account_tree, color: Colors.brown),
+            title: const Text('Chart of Accounts groups (edit)'),
+            subtitle: const Text('Group your categories/GLs by class, editable anytime'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const CoaManageScreen())),
           ),
           ListTile(
             leading: const Icon(Icons.handshake_outlined),

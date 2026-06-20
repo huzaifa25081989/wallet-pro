@@ -16,14 +16,14 @@ class DB {
 
   static Future<Database> _open() async {
     final path = p.join(await getDatabasesPath(), 'wallet_pro.db');
-    return openDatabase(path, version: 5, onCreate: _create, onUpgrade: _upgrade);
+    return openDatabase(path, version: 6, onCreate: _create, onUpgrade: _upgrade);
   }
 
   static Future<void> _create(Database d, int v) async {
     await d.execute(
         'CREATE TABLE accounts(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, opening REAL DEFAULT 0, archived INTEGER DEFAULT 0, phone TEXT, grp TEXT)');
     await d.execute(
-        'CREATE TABLE cats(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, archived INTEGER DEFAULT 0)');
+        'CREATE TABLE cats(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, archived INTEGER DEFAULT 0, grp TEXT)');
     await d.execute(
         'CREATE TABLE txns(id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, amount REAL, accountId INTEGER, toAccountId INTEGER, categoryId INTEGER, date TEXT, note TEXT, labels TEXT, project TEXT)');
     await d.execute(
@@ -81,7 +81,31 @@ class DB {
         await d.execute('ALTER TABLE txns ADD COLUMN project TEXT');
       } catch (_) {}
     }
+    if (from < 6) {
+      try {
+        await d.execute('ALTER TABLE cats ADD COLUMN grp TEXT');
+      } catch (_) {}
+    }
   }
+
+  /// Distinct chart-of-accounts groups for a category class (income/expense).
+  static Future<List<String>> catGroups(String type) async {
+    final rows = await (await db).rawQuery(
+        "SELECT DISTINCT grp FROM cats WHERE type=? AND grp IS NOT NULL AND grp<>'' ORDER BY grp",
+        [type]);
+    return [for (final r in rows) r['grp'] as String];
+  }
+
+  static Future<void> setCatGroup(int catId, String? grp) async =>
+      (await db).update('cats', {'grp': grp}, where: 'id=?', whereArgs: [catId]);
+
+  static Future<void> renameCatGroup(String type, String oldName, String newName) async =>
+      (await db).update('cats', {'grp': newName},
+          where: 'type=? AND grp=?', whereArgs: [type, oldName]);
+
+  static Future<void> clearCatGroup(String type, String grp) async =>
+      (await db).update('cats', {'grp': null},
+          where: 'type=? AND grp=?', whereArgs: [type, grp]);
 
   /// All distinct project / cost-centre names used across transactions.
   static Future<List<String>> distinctProjects() async {
