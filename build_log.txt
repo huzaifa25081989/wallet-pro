@@ -5,6 +5,7 @@ warning • The include file 'package:flutter_lints/flutter.yaml' in '/home/runn
 warning • The '!' will have no effect because the receiver can't be null • lib/db.dart:397:52 • unnecessary_non_null_assertion
 warning • Unused import: '../theme.dart' • lib/screens/analytics.dart:5:8 • unused_import
 warning • The value of the local variable 'cs' isn't used • lib/screens/analytics.dart:148:11 • unused_local_variable
+   info • 'surfaceVariant' is deprecated and shouldn't be used. Use surfaceContainerHighest instead. This feature was deprecated after v3.18.0-0.1.pre • lib/screens/coa_manage.dart:178:21 • deprecated_member_use
 warning • Unused import: '../widgets.dart' • lib/screens/customize_home.dart:3:8 • unused_import
 warning • Unused import: '../cloud.dart' • lib/screens/family.dart:4:8 • unused_import
 warning • The value of the local variable 'cs' isn't used • lib/screens/family.dart:423:11 • unused_local_variable
@@ -16,7 +17,7 @@ warning • Unused import: 'package:url_launcher/url_launcher.dart' • lib/scre
    info • A value for optional parameter 'catId' isn't ever given • lib/screens/txn_edit.dart:19:34 • unused_element
    info • A value for optional parameter 'acctId' isn't ever given • lib/screens/txn_edit.dart:19:46 • unused_element
 
-14 issues found. (ran in 20.6s)
+15 issues found. (ran in 20.5s)
 ===== flutter build apk =====
 
 Running Gradle task 'assembleRelease'...                        
@@ -37,5 +38,5 @@ Installing Android SDK Platform 33 in /usr/local/lib/android/sdk/platforms/andro
 Note: Some input files use or override a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
 Caught exception: Already watching path: /home/runner/work/wallet-pro/wallet-pro/android
-Running Gradle task 'assembleRelease'...                          454.3s
-✓ Built build/app/outputs/flutter-apk/app-release.apk (61.2MB)
+Running Gradle task 'assembleRelease'...                          460.5s
+✓ Built build/app/outputs/flutter-apk/app-release.apk (61.4MB)
