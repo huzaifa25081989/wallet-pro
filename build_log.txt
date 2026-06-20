@@ -2,7 +2,7 @@
 Analyzing wallet-pro...                                         
 
 warning • The include file 'package:flutter_lints/flutter.yaml' in '/home/runner/work/wallet-pro/wallet-pro/analysis_options.yaml' can't be found when analyzing '/home/runner/work/wallet-pro/wallet-pro' • analysis_options.yaml:10:10 • include_file_not_found
-warning • The '!' will have no effect because the receiver can't be null • lib/db.dart:336:52 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/db.dart:360:52 • unnecessary_non_null_assertion
 warning • Unused import: '../theme.dart' • lib/screens/analytics.dart:5:8 • unused_import
 warning • The value of the local variable 'cs' isn't used • lib/screens/analytics.dart:148:11 • unused_local_variable
 warning • Unused import: '../widgets.dart' • lib/screens/customize_home.dart:3:8 • unused_import
@@ -13,7 +13,7 @@ warning • Unused import: 'package:url_launcher/url_launcher.dart' • lib/scre
    info • A value for optional parameter 'duplicate' isn't ever given • lib/screens/reconcile.dart:16:71 • unused_element
    info • A value for optional parameter 'selected' isn't ever given • lib/screens/split_bill.dart:10:31 • unused_element
 
-11 issues found. (ran in 20.5s)
+11 issues found. (ran in 20.0s)
 ===== flutter build apk =====
 
 Running Gradle task 'assembleRelease'...                        
@@ -34,5 +34,5 @@ Installing Android SDK Platform 33 in /usr/local/lib/android/sdk/platforms/andro
 Note: Some input files use or override a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
 Caught exception: Already watching path: /home/runner/work/wallet-pro/wallet-pro/android
-Running Gradle task 'assembleRelease'...                          456.5s
+Running Gradle task 'assembleRelease'...                          415.0s
 ✓ Built build/app/outputs/flutter-apk/app-release.apk (60.9MB)
