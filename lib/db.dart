@@ -16,7 +16,7 @@ class DB {
 
   static Future<Database> _open() async {
     final path = p.join(await getDatabasesPath(), 'wallet_pro.db');
-    return openDatabase(path, version: 4, onCreate: _create, onUpgrade: _upgrade);
+    return openDatabase(path, version: 5, onCreate: _create, onUpgrade: _upgrade);
   }
 
   static Future<void> _create(Database d, int v) async {
@@ -25,7 +25,7 @@ class DB {
     await d.execute(
         'CREATE TABLE cats(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, archived INTEGER DEFAULT 0)');
     await d.execute(
-        'CREATE TABLE txns(id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, amount REAL, accountId INTEGER, toAccountId INTEGER, categoryId INTEGER, date TEXT, note TEXT, labels TEXT)');
+        'CREATE TABLE txns(id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, amount REAL, accountId INTEGER, toAccountId INTEGER, categoryId INTEGER, date TEXT, note TEXT, labels TEXT, project TEXT)');
     await d.execute(
         'CREATE TABLE loans(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, principal REAL, rate REAL, dueDate TEXT, paid REAL DEFAULT 0, note TEXT)');
     await d.execute(
@@ -76,6 +76,18 @@ class DB {
         await d.execute('ALTER TABLE txns ADD COLUMN labels TEXT');
       } catch (_) {}
     }
+    if (from < 5) {
+      try {
+        await d.execute('ALTER TABLE txns ADD COLUMN project TEXT');
+      } catch (_) {}
+    }
+  }
+
+  /// All distinct project / cost-centre names used across transactions.
+  static Future<List<String>> distinctProjects() async {
+    final rows = await (await db)
+        .rawQuery("SELECT DISTINCT project FROM txns WHERE project IS NOT NULL AND project<>'' ORDER BY project");
+    return [for (final r in rows) r['project'] as String];
   }
 
   static Future<void> _seed(Database d) async {
@@ -457,7 +469,7 @@ class DB {
   /// Income/expense transactions in a window for analytics, with category info,
   /// optionally filtered to one account. Transfers are excluded.
   static Future<List<Map<String, Object?>>> analyticsTxns(
-      String fromIso, String toIso, {int? accountId, String? label}) async {
+      String fromIso, String toIso, {int? accountId, String? label, String? project}) async {
     final where = StringBuffer("t.date>=? AND t.date<? AND t.type IN ('income','expense')");
     final args = <Object?>[fromIso, toIso];
     if (accountId != null) {
@@ -468,8 +480,12 @@ class DB {
       where.write(" AND (','||replace(t.labels,', ',',')||',') LIKE ?");
       args.add('%,$label,%');
     }
+    if (project != null && project.isNotEmpty) {
+      where.write(' AND t.project=?');
+      args.add(project);
+    }
     return (await db).rawQuery('''
-      SELECT t.type, t.amount, t.categoryId, t.date, t.accountId, t.labels,
+      SELECT t.type, t.amount, t.categoryId, t.date, t.accountId, t.labels, t.project,
              c.name catName, c.color catColor, c.icon catIcon
       FROM txns t LEFT JOIN cats c ON c.id=t.categoryId
       WHERE $where ORDER BY t.date ASC''', args);

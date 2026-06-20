@@ -17,7 +17,9 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   String breakdownType = 'expense';
   int? accountId;
   String? label;
+  String? project;
   List<String> allLabels = [];
+  List<String> allProjects = [];
   DateTime from = DateTime(DateTime.now().year, DateTime.now().month, 1);
   DateTime to = DateTime.now();
 
@@ -44,6 +46,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Future<void> _init() async {
     accounts = await DB.accounts();
     allLabels = await DB.distinctLabels();
+    allProjects = await DB.distinctProjects();
     await _load();
   }
 
@@ -79,7 +82,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Future<void> _load() async {
     if (period != 'custom') _applyPeriod();
     final toExcl = _iso(to.add(const Duration(days: 1)));
-    final rows = await DB.analyticsTxns(_iso(from), toExcl, accountId: accountId, label: label);
+    final rows = await DB.analyticsTxns(_iso(from), toExcl, accountId: accountId, label: label, project: project);
     double inc = 0, exp = 0;
     final ct = <String, double>{};
     final cc = <String, int>{};
@@ -97,7 +100,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     // MoM last 6 months
     final now = DateTime.now();
     final start6 = DateTime(now.year, now.month - 5, 1);
-    final rows6 = await DB.analyticsTxns(_iso(start6), _iso(now.add(const Duration(days: 1))), accountId: accountId, label: label);
+    final rows6 = await DB.analyticsTxns(_iso(start6), _iso(now.add(const Duration(days: 1))), accountId: accountId, label: label, project: project);
     final buckets = <String, List<double>>{};
     for (int i = 5; i >= 0; i--) {
       final m = DateTime(now.year, now.month - i, 1);
@@ -232,6 +235,29 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         ],
                         onChanged: (v) {
                           setState(() => label = v);
+                          _load();
+                        },
+                      ),
+                    ),
+                  ]),
+                ],
+                if (allProjects.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    const Icon(Icons.workspaces_outline, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButton<String?>(
+                        value: project,
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                        items: [
+                          const DropdownMenuItem(value: null, child: Text('All projects / cost centres')),
+                          for (final p in allProjects)
+                            DropdownMenuItem(value: p, child: Text(p)),
+                        ],
+                        onChanged: (v) {
+                          setState(() => project = v);
                           _load();
                         },
                       ),

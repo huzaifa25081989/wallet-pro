@@ -25,6 +25,8 @@ import '../updater.dart';
 import 'networth.dart';
 import 'simulator.dart';
 import 'reconcile.dart';
+import 'split_expense.dart';
+import 'split_bill.dart';
 import 'setbalances.dart';
 import 'cloud.dart';
 import '../cloud.dart';
@@ -516,6 +518,24 @@ class _MoreScreenState extends State<MoreScreen> {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push(
                 context, MaterialPageRoute(builder: (_) => const SimulatorScreen())),
+          ),
+          const Divider(),
+          const _Header('Recording tools'),
+          ListTile(
+            leading: const Icon(Icons.call_split, color: Colors.teal),
+            title: const Text('Split expense (one payment, many categories)'),
+            subtitle: const Text('e.g. one Cash payment = grocery + medical + food'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const SplitExpenseScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.groups, color: Colors.deepOrange),
+            title: const Text('Split a bill with friends'),
+            subtitle: const Text('You pay, friends owe you (equal or custom)'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const SplitBillScreen())),
           ),
           const Divider(),
           const _Header('Personalize'),

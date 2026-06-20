@@ -10,6 +10,8 @@ import 'goals.dart';
 import 'insights.dart';
 import 'networth.dart';
 import 'simulator.dart';
+import 'split_expense.dart';
+import 'split_bill.dart';
 import 'txn_edit.dart';
 import 'txns.dart';
 
@@ -454,6 +456,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _chip(Icons.auto_awesome, 'Insights', () => _open(const InsightsScreen())),
         _chip(Icons.calculate, 'Simulator', () => _open(const SimulatorScreen())),
         _chip(Icons.account_balance, 'Net Worth', () => _open(const NetWorthScreen())),
+        _chip(Icons.call_split, 'Split expense', () => _open(const SplitExpenseScreen())),
+        _chip(Icons.groups, 'Split bill', () => _open(const SplitBillScreen())),
       ]),
     );
   }
