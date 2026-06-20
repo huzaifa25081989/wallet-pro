@@ -6,6 +6,9 @@ warning • The '!' will have no effect because the receiver can't be null • l
 warning • Unused import: '../theme.dart' • lib/screens/analytics.dart:5:8 • unused_import
 warning • The value of the local variable 'cs' isn't used • lib/screens/analytics.dart:148:11 • unused_local_variable
 warning • Unused import: '../widgets.dart' • lib/screens/customize_home.dart:3:8 • unused_import
+warning • Unused import: '../cloud.dart' • lib/screens/family.dart:4:8 • unused_import
+  error • The method 'headerGradient' isn't defined for the type '_FamilyScreenState' • lib/screens/family.dart:95:35 • undefined_method
+warning • The value of the local variable 'cs' isn't used • lib/screens/family.dart:422:11 • unused_local_variable
 warning • The value of the local variable 'cs' isn't used • lib/screens/home.dart:334:11 • unused_local_variable
 warning • The value of the local variable 'cs' isn't used • lib/screens/home.dart:380:11 • unused_local_variable
 warning • Unused import: 'package:url_launcher/url_launcher.dart' • lib/screens/more.dart:14:8 • unused_import
@@ -13,7 +16,7 @@ warning • Unused import: 'package:url_launcher/url_launcher.dart' • lib/scre
    info • A value for optional parameter 'duplicate' isn't ever given • lib/screens/reconcile.dart:16:71 • unused_element
    info • A value for optional parameter 'selected' isn't ever given • lib/screens/split_bill.dart:10:31 • unused_element
 
-11 issues found. (ran in 20.0s)
+14 issues found. (ran in 21.9s)
 ===== flutter build apk =====
 
 Running Gradle task 'assembleRelease'...                        
@@ -33,6 +36,26 @@ Installing Android SDK Platform 33 in /usr/local/lib/android/sdk/platforms/andro
 "Install Android SDK Platform 33 (revision 3)" finished.
 Note: Some input files use or override a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
-Caught exception: Already watching path: /home/runner/work/wallet-pro/wallet-pro/android
-Running Gradle task 'assembleRelease'...                          415.0s
-✓ Built build/app/outputs/flutter-apk/app-release.apk (60.9MB)
+lib/screens/family.dart:95:35: Error: The method 'headerGradient' isn't defined for the class '_FamilyScreenState'.
+ - '_FamilyScreenState' is from 'package:wallet_pro/screens/family.dart' ('lib/screens/family.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'headerGradient'.
+                        gradient: headerGradient(context), borderRadius: BorderRadius.circular(16)),
+                                  ^^^^^^^^^^^^^^
+Target kernel_snapshot_program failed: Exception
+
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileFlutterBuildRelease'.
+> Process 'command '/opt/hostedtoolcache/flutter/stable-3.24.5-x64/flutter/bin/flutter'' finished with non-zero exit value 1
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 4m 47s
+Running Gradle task 'assembleRelease'...                          288.0s
+Gradle task assembleRelease failed with exit code 1
