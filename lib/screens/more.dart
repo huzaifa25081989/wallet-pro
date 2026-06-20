@@ -27,6 +27,8 @@ import 'simulator.dart';
 import 'reconcile.dart';
 import 'split_expense.dart';
 import 'split_bill.dart';
+import 'ledger.dart';
+import 'security.dart';
 import 'setbalances.dart';
 import 'cloud.dart';
 import '../cloud.dart';
@@ -519,6 +521,14 @@ class _MoreScreenState extends State<MoreScreen> {
             onTap: () => Navigator.push(
                 context, MaterialPageRoute(builder: (_) => const SimulatorScreen())),
           ),
+          ListTile(
+            leading: const Icon(Icons.table_rows, color: Colors.blueGrey),
+            title: const Text('Detailed report (all filters)'),
+            subtitle: const Text('Columns + PDF/Excel: date, Dr/Cr, from/to, category, project...'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const LedgerReportScreen())),
+          ),
           const Divider(),
           const _Header('Recording tools'),
           ListTile(
@@ -679,6 +689,14 @@ class _MoreScreenState extends State<MoreScreen> {
           ),
           const Divider(),
           const _Header('App'),
+          ListTile(
+            leading: const Icon(Icons.lock_outline, color: Colors.indigo),
+            title: const Text('Password & security'),
+            subtitle: const Text('PIN lock, protect deletes'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const SecurityScreen())),
+          ),
           ListTile(
             leading: const Icon(Icons.system_update_outlined),
             title: const Text('Check for updates'),

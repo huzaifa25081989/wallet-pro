@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../db.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'security.dart';
 import 'statement.dart';
 import 'txn_edit.dart';
 
@@ -136,6 +137,7 @@ class _AccountEditState extends State<AccountEdit> {
   }
 
   Future<void> _delete() async {
+    if (!await requirePinForDelete(context)) return;
     if (!await confirm(context, 'Delete account?',
         'Records linked to this account will remain but the account will be removed. Continue?')) {
       return;

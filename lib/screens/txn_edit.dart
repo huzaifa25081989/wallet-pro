@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import '../db.dart';
+import 'security.dart';
 import '../widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -221,6 +222,7 @@ class _TxnEditState extends State<TxnEdit> {
   }
 
   Future<void> _delete() async {
+    if (!await requirePinForDelete(context)) return;
     if (!await confirm(context, 'Delete record?', 'This cannot be undone.')) return;
     await DB.delete('txns', widget.txn!['id'] as int);
     if (mounted) Navigator.pop(context);

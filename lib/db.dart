@@ -503,6 +503,49 @@ class DB {
       ORDER BY t.date DESC, t.id DESC LIMIT ?''', [n]);
   }
 
+  /// Full transaction list with joined names for the detailed ledger report.
+  static Future<List<Map<String, Object?>>> ledgerRows(
+    String fromIso,
+    String toIso, {
+    int? accountId,
+    int? categoryId,
+    String? label,
+    String? project,
+    String? type,
+  }) async {
+    final where = StringBuffer('t.date>=? AND t.date<?');
+    final args = <Object?>[fromIso, toIso];
+    if (type != null && type != 'all') {
+      where.write(' AND t.type=?');
+      args.add(type);
+    }
+    if (accountId != null) {
+      where.write(' AND (t.accountId=? OR t.toAccountId=?)');
+      args..add(accountId)..add(accountId);
+    }
+    if (categoryId != null) {
+      where.write(' AND t.categoryId=?');
+      args.add(categoryId);
+    }
+    if (label != null && label.isNotEmpty) {
+      where.write(" AND (','||replace(t.labels,', ',',')||',') LIKE ?");
+      args.add('%,$label,%');
+    }
+    if (project != null && project.isNotEmpty) {
+      where.write(' AND t.project=?');
+      args.add(project);
+    }
+    return (await db).rawQuery('''
+      SELECT t.type, t.amount, t.date, t.note, t.labels, t.project,
+             t.accountId, t.toAccountId,
+             c.name catName, af.name fromName, at.name toName
+      FROM txns t
+      LEFT JOIN cats c ON c.id=t.categoryId
+      LEFT JOIN accounts af ON af.id=t.accountId
+      LEFT JOIN accounts at ON at.id=t.toAccountId
+      WHERE $where ORDER BY t.date ASC, t.id ASC''', args);
+  }
+
   // ---------- get-or-create (used by CSV import) ----------
   static Future<int> accountByName(String name) async {
     final d = await db;

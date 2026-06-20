@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'db.dart';
 import 'branding.dart';
 import 'cloud.dart';
+import 'lock.dart';
+import 'screens/security.dart';
 import 'pro.dart';
 import 'theme.dart';
 import 'screens/budgets.dart';
@@ -34,6 +36,7 @@ class _WalletAppState extends State<WalletApp> {
     await pro.load();
     await branding.load();
     await cloud.init(); // optional Firebase cloud backup (safe if offline)
+    await lock.load(); // app lock state
     await DB.runRecurring(); // post any due recurring payments
   }
 
@@ -47,7 +50,7 @@ class _WalletAppState extends State<WalletApp> {
         theme: theme.light,
         darkTheme: theme.dark,
         themeMode: theme.mode,
-        home: const Shell(),
+        home: const LockGate(child: Shell()),
       ),
     );
   }
