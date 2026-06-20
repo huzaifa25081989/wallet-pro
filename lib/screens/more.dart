@@ -32,6 +32,7 @@ import 'security.dart';
 import 'setbalances.dart';
 import 'cloud.dart';
 import '../cloud.dart';
+import 'family.dart';
 import '../branding.dart';
 import 'accounts.dart';
 import 'categories.dart';
@@ -662,6 +663,14 @@ class _MoreScreenState extends State<MoreScreen> {
               onTap: () => Navigator.push(
                   context, MaterialPageRoute(builder: (_) => const CloudScreen())),
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.family_restroom, color: Colors.purple),
+            title: const Text('Family Connect'),
+            subtitle: const Text('Share a code, approve, see each other & bill expenses'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const FamilyScreen())),
           ),
           const Divider(),
           const _Header('Manual backup files'),
