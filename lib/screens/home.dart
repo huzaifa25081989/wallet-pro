@@ -4,16 +4,15 @@ import '../db.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'accounts.dart';
-import 'add_hub.dart';
 import 'analytics.dart';
 import 'customize_home.dart';
 import 'goals.dart';
 import 'insights.dart';
 import 'networth.dart';
 import 'simulator.dart';
-import 'split_expense.dart';
-import 'split_bill.dart';
 import 'txn_edit.dart';
+import 'loans.dart';
+import 'family.dart';
 import 'txns.dart';
 
 const defaultCards = ['month', 'recent', 'budgets', 'goals'];
@@ -114,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       floatingActionButton: FloatingActionButton.large(
         heroTag: 'home_add',
-        onPressed: () => _open(const AddHubScreen()),
+        onPressed: () => _open(const TxnEdit()),
         child: const Icon(Icons.add, size: 34),
       ),
       body: RefreshIndicator(
@@ -137,6 +136,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       const Text('Total balance',
                           style: TextStyle(color: Colors.white70, fontSize: 14)),
                       Row(children: [
+                        _circleBtn(Icons.mic, () =>
+                            _open(const TxnEdit(autoVoice: true))),
+                        const SizedBox(width: 8),
                         _circleBtn(Icons.search, () => showSearch(
                             context: context, delegate: WalletSearch(accounts, bals))),
                         const SizedBox(width: 8),
@@ -457,8 +459,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _chip(Icons.auto_awesome, 'Insights', () => _open(const InsightsScreen())),
         _chip(Icons.calculate, 'Simulator', () => _open(const SimulatorScreen())),
         _chip(Icons.account_balance, 'Net Worth', () => _open(const NetWorthScreen())),
-        _chip(Icons.call_split, 'Split expense', () => _open(const SplitExpenseScreen())),
-        _chip(Icons.groups, 'Split bill', () => _open(const SplitBillScreen())),
+        _chip(Icons.handshake, 'Loan / Debt', () => _open(const LoansScreen())),
+        _chip(Icons.family_restroom, 'Family', () => _open(const FamilyScreen())),
       ]),
     );
   }

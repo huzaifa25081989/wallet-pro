@@ -29,6 +29,7 @@ import 'ledger.dart';
 import 'security.dart';
 import 'setbalances.dart';
 import 'cloud.dart';
+import 'family.dart';
 import '../cloud.dart';
 import '../branding.dart';
 import 'accounts.dart';
@@ -569,6 +570,22 @@ class _MoreScreenState extends State<MoreScreen> {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push(
                 context, MaterialPageRoute(builder: (_) => const CoaManageScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.handshake_outlined, color: Colors.indigo),
+            title: const Text('Loans & Debts'),
+            subtitle: const Text('Track money you lent or borrowed'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const LoansScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.family_restroom, color: Colors.purple),
+            title: const Text('Family Connect'),
+            subtitle: const Text('Share a code, approve & bill family'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const FamilyScreen())),
           ),
           ListTile(
             leading: const Icon(Icons.handshake_outlined),

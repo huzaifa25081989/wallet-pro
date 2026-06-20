@@ -16,7 +16,7 @@ class DB {
 
   static Future<Database> _open() async {
     final path = p.join(await getDatabasesPath(), 'wallet_pro.db');
-    return openDatabase(path, version: 6, onCreate: _create, onUpgrade: _upgrade);
+    return openDatabase(path, version: 7, onCreate: _create, onUpgrade: _upgrade);
   }
 
   static Future<void> _create(Database d, int v) async {
@@ -25,7 +25,7 @@ class DB {
     await d.execute(
         'CREATE TABLE cats(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, icon INTEGER, color INTEGER, archived INTEGER DEFAULT 0, grp TEXT)');
     await d.execute(
-        'CREATE TABLE txns(id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, amount REAL, accountId INTEGER, toAccountId INTEGER, categoryId INTEGER, date TEXT, note TEXT, labels TEXT, project TEXT)');
+        'CREATE TABLE txns(id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, amount REAL, accountId INTEGER, toAccountId INTEGER, categoryId INTEGER, date TEXT, note TEXT, labels TEXT, project TEXT, voucher TEXT)');
     await d.execute(
         'CREATE TABLE loans(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, type TEXT, principal REAL, rate REAL, dueDate TEXT, paid REAL DEFAULT 0, note TEXT)');
     await d.execute(
@@ -84,6 +84,11 @@ class DB {
     if (from < 6) {
       try {
         await d.execute('ALTER TABLE cats ADD COLUMN grp TEXT');
+      } catch (_) {}
+    }
+    if (from < 7) {
+      try {
+        await d.execute('ALTER TABLE txns ADD COLUMN voucher TEXT');
       } catch (_) {}
     }
   }
@@ -256,7 +261,39 @@ class DB {
       running += delta;
       out.add({...r, 'delta': delta, 'running': running, 'label': label});
     }
-    return out.reversed.toList(); // newest first for display
+    // Collapse multi-line vouchers into a single display row for this account.
+    final grouped = <Map<String, Object?>>[];
+    int idx = 0;
+    while (idx < out.length) {
+      final v = out[idx]['voucher'] as String?;
+      if (v == null || v.isEmpty) {
+        grouped.add(out[idx]);
+        idx++;
+        continue;
+      }
+      // gather all consecutive legs of this voucher that affect THIS account
+      double totalDelta = 0;
+      double running2 = out[idx]['running'] as double;
+      final parts = <String>[];
+      int j = idx;
+      while (j < out.length && (out[j]['voucher'] as String?) == v) {
+        totalDelta += out[j]['delta'] as double;
+        running2 = out[j]['running'] as double;
+        final amt = ((out[j]['amount'] as num?) ?? 0).toDouble();
+        final lbl = out[j]['label'] as String? ?? '';
+        parts.add('$lbl ${amt == amt.roundToDouble() ? amt.toStringAsFixed(0) : amt.toStringAsFixed(2)}');
+        j++;
+      }
+      grouped.add({
+        ...out[idx],
+        'delta': totalDelta,
+        'running': running2,
+        'label': parts.join(', '),
+        'isVoucher': true,
+      });
+      idx = j;
+    }
+    return grouped.reversed.toList(); // newest first for display
   }
 
   // ---------- report queries ----------
