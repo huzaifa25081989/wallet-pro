@@ -4,6 +4,7 @@ import '../db.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'accounts.dart';
+import 'add_hub.dart';
 import 'analytics.dart';
 import 'customize_home.dart';
 import 'goals.dart';
@@ -112,9 +113,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.large(
-        heroTag: 'home_voice',
-        onPressed: () => _open(const TxnEdit(autoVoice: true)),
-        child: const Icon(Icons.mic, size: 32),
+        heroTag: 'home_add',
+        onPressed: () => _open(const AddHubScreen()),
+        child: const Icon(Icons.add, size: 34),
       ),
       body: RefreshIndicator(
         onRefresh: _load,

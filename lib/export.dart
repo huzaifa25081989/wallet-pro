@@ -188,8 +188,8 @@ Future<void> exportCategoryPdf({
   await _share(name, await doc.save(), '$title\n$subtitle');
 }
 
-/// Detailed multi-column ledger export.
-/// rows: [{date, detail, fromName, toName, nature, category, project, labels, dr(num), cr(num)}]
+/// Detailed multi-column ledger export with a running balance.
+/// rows: [{date, detail, fromName, toName, nature, category, dr(num), cr(num), bal(num)}]
 Future<void> exportLedgerPdf({
   required String title,
   required String subtitle,
@@ -200,7 +200,8 @@ Future<void> exportLedgerPdf({
     totalDr += (r['dr'] as num? ?? 0).toDouble();
     totalCr += (r['cr'] as num? ?? 0).toDouble();
   }
-  final headers = ['Date', 'Detail', 'From', 'To', 'Nature', 'Category', 'Project', 'Labels', 'Debit', 'Credit'];
+  final closing = rows.isEmpty ? 0.0 : (rows.last['bal'] as num? ?? 0).toDouble();
+  final headers = ['Date', 'Detail', 'From', 'To', 'Nature', 'Category', 'Debit', 'Credit', 'Balance'];
   final data = <List<String>>[
     for (final r in rows)
       [
@@ -210,39 +211,90 @@ Future<void> exportLedgerPdf({
         (r['toName'] as String? ?? ''),
         (r['nature'] as String? ?? ''),
         (r['category'] as String? ?? ''),
-        (r['project'] as String? ?? ''),
-        (r['labels'] as String? ?? ''),
         (r['dr'] as num? ?? 0) == 0 ? '' : _money(r['dr'] as num),
         (r['cr'] as num? ?? 0) == 0 ? '' : _money(r['cr'] as num),
+        _money(r['bal'] as num? ?? 0),
       ],
-    ['', 'TOTALS', '', '', '', '', '', '', _money(totalDr), _money(totalCr)],
   ];
   final doc = pw.Document();
   doc.addPage(pw.MultiPage(
     pageFormat: PdfPageFormat.a4.landscape,
-    margin: const pw.EdgeInsets.all(18),
+    margin: const pw.EdgeInsets.all(22),
+    header: (ctx) => ctx.pageNumber == 1
+        ? pw.SizedBox()
+        : pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 6),
+            child: pw.Text(title, style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600))),
+    footer: (ctx) => pw.Align(
+      alignment: pw.Alignment.centerRight,
+      child: pw.Text('Page ${ctx.pageNumber} of ${ctx.pagesCount}',
+          style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+    ),
     build: (ctx) => [
-      pw.Text(title, style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
-      pw.Text(subtitle, style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-      pw.SizedBox(height: 8),
+      // professional header band
+      pw.Container(
+        width: double.infinity,
+        padding: const pw.EdgeInsets.all(14),
+        decoration: const pw.BoxDecoration(color: PdfColors.teal800),
+        child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+          pw.Text(title, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+          pw.SizedBox(height: 3),
+          pw.Text(subtitle, style: const pw.TextStyle(fontSize: 10, color: PdfColors.white)),
+        ]),
+      ),
+      pw.SizedBox(height: 12),
       pw.TableHelper.fromTextArray(
         headers: headers,
         data: data,
         border: pw.TableBorder.all(color: PdfColors.grey300, width: .5),
-        headerStyle: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-        headerDecoration: const pw.BoxDecoration(color: PdfColors.teal700),
-        cellStyle: const pw.TextStyle(fontSize: 7.5),
-        cellHeight: 16,
-        cellAlignments: {
-          8: pw.Alignment.centerRight,
-          9: pw.Alignment.centerRight,
+        headerStyle: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+        headerDecoration: const pw.BoxDecoration(color: PdfColors.teal600),
+        rowDecoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey200, width: .5))),
+        oddRowDecoration: const pw.BoxDecoration(color: PdfColors.grey100),
+        cellStyle: const pw.TextStyle(fontSize: 8),
+        cellHeight: 17,
+        columnWidths: {
+          0: const pw.FlexColumnWidth(1.3),
+          1: const pw.FlexColumnWidth(2.4),
+          2: const pw.FlexColumnWidth(1.6),
+          3: const pw.FlexColumnWidth(1.6),
+          4: const pw.FlexColumnWidth(1.2),
+          5: const pw.FlexColumnWidth(1.6),
+          6: const pw.FlexColumnWidth(1.2),
+          7: const pw.FlexColumnWidth(1.2),
+          8: const pw.FlexColumnWidth(1.4),
         },
+        cellAlignments: {
+          6: pw.Alignment.centerRight,
+          7: pw.Alignment.centerRight,
+          8: pw.Alignment.centerRight,
+        },
+      ),
+      pw.SizedBox(height: 10),
+      pw.Container(
+        alignment: pw.Alignment.centerRight,
+        child: pw.Row(mainAxisAlignment: pw.MainAxisAlignment.end, children: [
+          _totBox('Total Debit', _money(totalDr), PdfColors.red700),
+          pw.SizedBox(width: 10),
+          _totBox('Total Credit', _money(totalCr), PdfColors.green700),
+          pw.SizedBox(width: 10),
+          _totBox('Closing Balance', _money(closing), PdfColors.teal800),
+        ]),
       ),
     ],
   ));
   final name = '${title.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_')}.pdf';
   await _share(name, await doc.save(), '$title\n$subtitle');
 }
+
+pw.Widget _totBox(String label, String value, PdfColor color) => pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: pw.BoxDecoration(border: pw.Border.all(color: color, width: 1), borderRadius: pw.BorderRadius.circular(4)),
+      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
+        pw.Text(label, style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+        pw.Text(value, style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: color)),
+      ]),
+    );
 
 Future<void> exportLedgerExcel({
   required String title,
@@ -254,8 +306,9 @@ Future<void> exportLedgerExcel({
     totalDr += (r['dr'] as num? ?? 0).toDouble();
     totalCr += (r['cr'] as num? ?? 0).toDouble();
   }
+  final closing = rows.isEmpty ? 0.0 : (rows.last['bal'] as num? ?? 0).toDouble();
   final book = xl.Excel.createExcel();
-  const sheetName = 'Ledger';
+  const sheetName = 'Report';
   final sheet = book[sheetName];
   for (final s in book.sheets.keys.toList()) {
     if (s != sheetName) book.delete(s);
@@ -267,7 +320,7 @@ Future<void> exportLedgerExcel({
   row([t(title)]);
   row([t(subtitle)]);
   row([]);
-  row([t('Date'), t('Detail'), t('From'), t('To'), t('Nature'), t('Category'), t('Project'), t('Labels'), t('Debit'), t('Credit')]);
+  row([t('Date'), t('Detail'), t('From'), t('To'), t('Nature'), t('Category'), t('Debit'), t('Credit'), t('Balance')]);
   for (final r in rows) {
     row([
       t(_dt(r['date'])),
@@ -276,13 +329,13 @@ Future<void> exportLedgerExcel({
       t(r['toName'] as String? ?? ''),
       t(r['nature'] as String? ?? ''),
       t(r['category'] as String? ?? ''),
-      t(r['project'] as String? ?? ''),
-      t(r['labels'] as String? ?? ''),
       (r['dr'] as num? ?? 0) == 0 ? t('') : n(r['dr'] as num),
       (r['cr'] as num? ?? 0) == 0 ? t('') : n(r['cr'] as num),
+      n(r['bal'] as num? ?? 0),
     ]);
   }
-  row([t(''), t('TOTALS'), t(''), t(''), t(''), t(''), t(''), t(''), n(totalDr), n(totalCr)]);
+  row([]);
+  row([t(''), t('TOTALS'), t(''), t(''), t(''), t(''), n(totalDr), n(totalCr), n(closing)]);
 
   final bytes = book.save();
   if (bytes == null) return;

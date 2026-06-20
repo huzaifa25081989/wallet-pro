@@ -57,7 +57,7 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
       type: type,
     );
     final out = <Map<String, Object?>>[];
-    double dr = 0, cr = 0;
+    double dr = 0, cr = 0, running = 0;
     for (final r in raw) {
       final amt = (r['amount'] as num? ?? 0).toDouble();
       final t = r['type'] as String?;
@@ -76,6 +76,7 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
       }
       dr += rdr;
       cr += rcr;
+      running += rcr - rdr;
       out.add({
         'date': r['date'],
         'detail': r['note'],
@@ -87,6 +88,7 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         'labels': r['labels'],
         'dr': rdr,
         'cr': rcr,
+        'bal': running,
       });
     }
     if (!mounted) return;
@@ -234,8 +236,16 @@ class _LedgerReportScreenState extends State<LedgerReportScreen> {
         r['nature'],
         if ((r['project'] as String?)?.isNotEmpty == true) '#${r['project']}',
       ].where((e) => e != null && (e as String).isNotEmpty).join(' · ')),
-      trailing: Text(dr > 0 ? '-${money(dr)}' : '+${money(cr)}',
-          style: TextStyle(fontWeight: FontWeight.bold, color: dr > 0 ? Colors.red : Colors.green)),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(dr > 0 ? '-${money(dr)}' : '+${money(cr)}',
+              style: TextStyle(fontWeight: FontWeight.bold, color: dr > 0 ? Colors.red : Colors.green)),
+          Text('Bal ${money((r['bal'] as num? ?? 0).toDouble())}',
+              style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline)),
+        ],
+      ),
     );
   }
 

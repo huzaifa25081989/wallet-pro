@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../db.dart';
+import 'add_hub.dart';
 import '../widgets.dart';
 import 'txn_edit.dart';
 
@@ -86,11 +87,12 @@ class _TxnsScreenState extends State<TxnsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Records')),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         heroTag: 'txns_fab',
         onPressed: () =>
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const TxnEdit())),
-        child: const Icon(Icons.add),
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const AddHubScreen())),
+        icon: const Icon(Icons.add),
+        label: const Text('Add'),
       ),
       body: Column(
         children: [

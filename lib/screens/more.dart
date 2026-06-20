@@ -25,14 +25,11 @@ import '../updater.dart';
 import 'networth.dart';
 import 'simulator.dart';
 import 'reconcile.dart';
-import 'split_expense.dart';
-import 'split_bill.dart';
 import 'ledger.dart';
 import 'security.dart';
 import 'setbalances.dart';
 import 'cloud.dart';
 import '../cloud.dart';
-import 'family.dart';
 import '../branding.dart';
 import 'accounts.dart';
 import 'categories.dart';
@@ -532,24 +529,6 @@ class _MoreScreenState extends State<MoreScreen> {
                 context, MaterialPageRoute(builder: (_) => const LedgerReportScreen())),
           ),
           const Divider(),
-          const _Header('Recording tools'),
-          ListTile(
-            leading: const Icon(Icons.call_split, color: Colors.teal),
-            title: const Text('Split expense (one payment, many categories)'),
-            subtitle: const Text('e.g. one Cash payment = grocery + medical + food'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (_) => const SplitExpenseScreen())),
-          ),
-          ListTile(
-            leading: const Icon(Icons.groups, color: Colors.deepOrange),
-            title: const Text('Split a bill with friends'),
-            subtitle: const Text('You pay, friends owe you (equal or custom)'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (_) => const SplitBillScreen())),
-          ),
-          const Divider(),
           const _Header('Personalize'),
           ListTile(
             leading: const Icon(Icons.palette_outlined),
@@ -663,14 +642,6 @@ class _MoreScreenState extends State<MoreScreen> {
               onTap: () => Navigator.push(
                   context, MaterialPageRoute(builder: (_) => const CloudScreen())),
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.family_restroom, color: Colors.purple),
-            title: const Text('Family Connect'),
-            subtitle: const Text('Share a code, approve, see each other & bill expenses'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (_) => const FamilyScreen())),
           ),
           const Divider(),
           const _Header('Manual backup files'),
