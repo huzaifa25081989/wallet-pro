@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../db.dart';
+import '../theme.dart';
+import 'challenge.dart';
 import '../widgets.dart';
 
 class GoalsScreen extends StatefulWidget {
@@ -66,19 +68,45 @@ class _GoalsScreenState extends State<GoalsScreen> {
         icon: const Icon(Icons.add),
         label: const Text('New goal'),
       ),
-      body: goals.isEmpty
-          ? const Center(
-              child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text('No goals yet. Tap "New goal" to start saving for something.',
-                      textAlign: TextAlign.center)))
-          : ListView(
-              padding: const EdgeInsets.all(12),
-              children: [
-                for (final g in goals) _goalCard(context, g),
-                const SizedBox(height: 90),
-              ],
+      body: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const DailyChallengeScreen())).then((_) => _load()),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(gradient: headerGradient(context)),
+                child: Row(children: const [
+                  Text('\u{1F525}', style: TextStyle(fontSize: 34)),
+                  SizedBox(width: 14),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Daily Save Challenge',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      SizedBox(height: 2),
+                      Text('Save a little every day and keep your streak alive',
+                          style: TextStyle(color: Colors.white70, fontSize: 12.5)),
+                    ]),
+                  ),
+                  Icon(Icons.chevron_right, color: Colors.white),
+                ]),
+              ),
             ),
+          ),
+          const SizedBox(height: 8),
+          if (goals.isEmpty)
+            const Padding(
+                padding: EdgeInsets.all(28),
+                child: Text('No goals yet. Tap "New goal" to start saving for something.',
+                    textAlign: TextAlign.center))
+          else
+            for (final g in goals) _goalCard(context, g),
+          const SizedBox(height: 90),
+        ],
+      ),
     );
   }
 

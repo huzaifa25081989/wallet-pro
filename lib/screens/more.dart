@@ -17,7 +17,10 @@ import '../db.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'appearance.dart';
+import '../license.dart';
 import 'about.dart';
+import 'info.dart';
+import 'subscribe.dart';
 import 'admin_branding.dart';
 import 'insights.dart';
 import 'drive_help.dart';
@@ -572,27 +575,12 @@ class _MoreScreenState extends State<MoreScreen> {
                 context, MaterialPageRoute(builder: (_) => const CoaManageScreen())),
           ),
           ListTile(
-            leading: const Icon(Icons.handshake_outlined, color: Colors.indigo),
-            title: const Text('Loans & Debts'),
-            subtitle: const Text('Track money you lent or borrowed'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (_) => const LoansScreen())),
-          ),
-          ListTile(
             leading: const Icon(Icons.family_restroom, color: Colors.purple),
             title: const Text('Family Connect'),
             subtitle: const Text('Share a code, approve & bill family'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.push(
                 context, MaterialPageRoute(builder: (_) => const FamilyScreen())),
-          ),
-          ListTile(
-            leading: const Icon(Icons.handshake_outlined),
-            title: const Text('Loans & Debts'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (_) => const LoansScreen())),
           ),
           ListTile(
             leading: const Icon(Icons.event_repeat_outlined),
@@ -624,8 +612,8 @@ class _MoreScreenState extends State<MoreScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.move_to_inbox_outlined),
-            title: const Text('Import from Wallet (BudgetBakers)'),
-            subtitle: const Text('Pick the CSV exported from the Wallet app'),
+            title: const Text('Import your old data'),
+            subtitle: const Text('Bring in a CSV exported from your previous app'),
             onTap: busy ? null : () => _run(_importWalletCsv),
           ),
           ListTile(
@@ -696,6 +684,35 @@ class _MoreScreenState extends State<MoreScreen> {
           ),
           const Divider(),
           const _Header('App'),
+          ListenableBuilder(
+            listenable: license,
+            builder: (context, _) => ListTile(
+              leading: const Icon(Icons.workspace_premium, color: Colors.amber),
+              title: const Text('Membership'),
+              subtitle: Text(license.isPremium
+                  ? '${license.planLabel(license.plan)} \u00b7 ${license.premiumDaysLeft} days left'
+                  : (license.isTrial ? 'Free trial \u00b7 ${license.trialDaysLeft} days left' : 'Trial ended \u2014 subscribe to continue')),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                  context, MaterialPageRoute(builder: (_) => const SubscribeScreen())),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.info_outline, color: Colors.blue),
+            title: const Text('About app & how to use'),
+            subtitle: const Text('Simple guide and how to subscribe'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const AboutScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.feedback_outlined, color: Colors.teal),
+            title: const Text('Feedback & complaints'),
+            subtitle: const Text('Tell the developer what you think'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const FeedbackScreen())),
+          ),
           ListTile(
             leading: const Icon(Icons.lock_outline, color: Colors.indigo),
             title: const Text('Password & security'),

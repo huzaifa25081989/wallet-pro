@@ -5,7 +5,7 @@ import 'widgets.dart';
 /// Editable, on-device branding/content. Owner (Business tier) can change these
 /// from the admin screen; values persist in the settings table.
 class Branding extends ChangeNotifier {
-  String appName = 'Wallet Pro';
+  String appName = 'ProFinance';
   String tagline = 'Your money, beautifully managed';
   String currency = 'Rs';
   String devName = 'Muhammad Huzaifa';

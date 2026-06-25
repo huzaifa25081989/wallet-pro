@@ -11,7 +11,6 @@ import 'insights.dart';
 import 'networth.dart';
 import 'simulator.dart';
 import 'txn_edit.dart';
-import 'loans.dart';
 import 'family.dart';
 import 'txns.dart';
 
@@ -459,7 +458,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _chip(Icons.auto_awesome, 'Insights', () => _open(const InsightsScreen())),
         _chip(Icons.calculate, 'Simulator', () => _open(const SimulatorScreen())),
         _chip(Icons.account_balance, 'Net Worth', () => _open(const NetWorthScreen())),
-        _chip(Icons.handshake, 'Loan / Debt', () => _open(const LoansScreen())),
         _chip(Icons.family_restroom, 'Family', () => _open(const FamilyScreen())),
       ]),
     );

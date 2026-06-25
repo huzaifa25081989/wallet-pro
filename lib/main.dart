@@ -3,7 +3,9 @@ import 'db.dart';
 import 'branding.dart';
 import 'cloud.dart';
 import 'lock.dart';
+import 'license.dart';
 import 'screens/security.dart';
+import 'screens/subscribe.dart';
 import 'pro.dart';
 import 'theme.dart';
 import 'screens/budgets.dart';
@@ -37,6 +39,7 @@ class _WalletAppState extends State<WalletApp> {
     await branding.load();
     await cloud.init(); // optional Firebase cloud backup (safe if offline)
     await lock.load(); // app lock state
+    await license.load(); // trial / subscription state
     await DB.runRecurring(); // post any due recurring payments
   }
 
@@ -45,12 +48,12 @@ class _WalletAppState extends State<WalletApp> {
     return ListenableBuilder(
       listenable: theme,
       builder: (_, __) => MaterialApp(
-        title: 'Wallet Pro',
+        title: 'ProFinance',
         debugShowCheckedModeBanner: false,
         theme: theme.light,
         darkTheme: theme.dark,
         themeMode: theme.mode,
-        home: const LockGate(child: Shell()),
+        home: const LicenseGate(child: LockGate(child: Shell())),
       ),
     );
   }

@@ -32,7 +32,7 @@ jobs:
         run: |
           M=android/app/src/main/AndroidManifest.xml
           sed -i 's|<application|<uses-permission android:name="android.permission.RECORD_AUDIO"/>\n    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>\n    <queries><intent><action android:name="android.speech.RecognitionService"/></intent></queries>\n    <application|' $M
-          sed -i 's|android:label="wallet_pro"|android:label="Wallet Pro"|' $M
+          sed -i 's|android:label="wallet_pro"|android:label="ProFinance"|' $M
 
       - name: Set Android compile/target SDK to 35 and drop default test
         run: |
