@@ -41,6 +41,18 @@ jobs:
           sed -i 's|flutter.targetSdkVersion|35|g' $G
           sed -i 's|flutter.minSdkVersion|23|g' $G
           rm -f test/widget_test.dart
+      - name: Configure Play release signing (upload key)
+        run: |
+          STOREPASS="${{ secrets.UPLOAD_STORE_PASSWORD }}"
+          [ -z "$STOREPASS" ] && STOREPASS="ProFin_d33550fa25ea"
+          cp signing/upload-keystore.jks android/upload-keystore.jks
+          {
+            echo "storePassword=$STOREPASS"
+            echo "keyPassword=$STOREPASS"
+            echo "keyAlias=upload"
+            echo "storeFile=$GITHUB_WORKSPACE/android/upload-keystore.jks"
+          } > android/key.properties
+          python3 signing/patch_signing.py
 
       - name: Use persistent signing key (stable app identity)
         run: |
@@ -55,6 +67,9 @@ jobs:
           { echo "===== flutter analyze ====="; flutter analyze || true; \
             echo "===== flutter build apk ====="; \
             flutter build apk --release --no-tree-shake-icons \
+              --build-name=1.0.$GITHUB_RUN_NUMBER --build-number=$GITHUB_RUN_NUMBER; \
+            echo "===== flutter build appbundle ====="; \
+            flutter build appbundle --release --no-tree-shake-icons \
               --build-name=1.0.$GITHUB_RUN_NUMBER --build-number=$GITHUB_RUN_NUMBER; } 2>&1 | tee build_log.txt
 
       - name: Save build log back to repo
@@ -71,9 +86,11 @@ jobs:
           name: WalletPro-APK
           path: build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Rename APK
+      - name: Rename artifacts
         if: success()
-        run: cp build/app/outputs/flutter-apk/app-release.apk WalletPro.apk
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk WalletPro.apk
+          cp build/app/outputs/bundle/release/app-release.aab ProFinance.aab
 
       - name: Publish APK as a Release (easy phone download)
         if: success()
@@ -81,5 +98,9 @@ jobs:
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Wallet Pro v1.0.${{ github.run_number }}
-          body: Tap WalletPro.apk below to install on your Android phone.
-          files: WalletPro.apk
+          body: |
+            WalletPro.apk = sideload/testing build.
+            ProFinance.aab = upload this to Google Play Console.
+          files: |
+            WalletPro.apk
+            ProFinance.aab

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../billing.dart';
 import '../license.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -14,144 +14,146 @@ class SubscribeScreen extends StatefulWidget {
 }
 
 class _SubscribeScreenState extends State<SubscribeScreen> {
-  final codeCtl = TextEditingController();
-  String selected = '1Y';
-  bool working = false;
-
-  Plan get _plan => kPlans.firstWhere((p) => p.code == selected);
-
-  Future<void> _emailOwner() async {
-    final p = _plan;
-    final subject = Uri.encodeComponent('ProFinance subscription - ${p.label}');
-    final body = Uri.encodeComponent(
-        'Hi, I would like to subscribe to ProFinance.\n\n'
-        'Plan: ${p.label} (\$${p.priceUsd})\n'
-        'My App ID: ${license.appId}\n\n'
-        'I have sent the payment. Please send my activation code. Thank you.');
-    final uri = Uri.parse('mailto:$kOwnerEmail?subject=$subject&body=$body');
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (mounted) snack(context, 'No email app found. Email $kOwnerEmail');
-    }
+  @override
+  void initState() {
+    super.initState();
+    if (billing.available && billing.products.isEmpty) billing.refresh();
   }
 
-  Future<void> _activate() async {
-    setState(() => working = true);
-    final err = await license.activate(codeCtl.text);
-    setState(() => working = false);
-    if (!mounted) return;
-    if (err == null) {
-      snack(context, 'Activated! Premium until ${DateFormat('d MMM yyyy').format(license.premiumExpiryDate)}');
-      if (widget.wall && Navigator.of(context).canPop()) Navigator.of(context).pop();
-    } else {
-      snack(context, err);
+  String _tag(String plan) => plan == '1Y' ? 'Popular' : (plan == '2Y' ? 'Best value' : '');
+
+  Future<void> _buy(ProductDetails pd) async {
+    try {
+      await billing.buy(pd);
+    } catch (e) {
+      if (mounted) snack(context, 'Could not start purchase: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final body = ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(gradient: headerGradient(context), borderRadius: BorderRadius.circular(16)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              const Icon(Icons.workspace_premium, color: Colors.white),
-              const SizedBox(width: 8),
-              Text(license.isPremium ? 'Premium active' : (license.isTrial ? 'Free trial' : 'Trial ended'),
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            ]),
-            const SizedBox(height: 6),
+    final content = AnimatedBuilder(
+      animation: Listenable.merge([license, billing]),
+      builder: (context, _) {
+        if (widget.wall && license.isActive) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && Navigator.of(context).canPop()) Navigator.of(context).pop();
+          });
+        }
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(gradient: headerGradient(context), borderRadius: BorderRadius.circular(16)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  const Icon(Icons.workspace_premium, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(license.isPremium ? 'Premium active' : (license.isTrial ? 'Free trial' : 'Trial ended'),
+                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                ]),
+                const SizedBox(height: 6),
+                Text(
+                  license.isPremium
+                      ? '${license.planLabel(license.plan)} \u00b7 ${license.premiumDaysLeft} days left (until ${DateFormat('d MMM yyyy').format(license.premiumExpiryDate)})'
+                      : license.isTrial
+                          ? '${license.trialDaysLeft} days left in your free trial'
+                          : 'Your free trial is over. Subscribe to keep using ProFinance.',
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 18),
+            Text('Choose a plan', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            if (!billing.available)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('Subscriptions open in the Play Store version', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    Text('Install ProFinance from Google Play to subscribe securely. Your free trial works in any version.',
+                        style: TextStyle(color: cs.outline)),
+                  ]),
+                ),
+              )
+            else if (billing.loading && billing.products.isEmpty)
+              const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
+            else if (billing.products.isEmpty)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text('Plans are not available right now. Try again shortly.${billing.error != null ? '\n\n(${billing.error})' : ''}',
+                      style: TextStyle(color: cs.outline)),
+                ),
+              )
+            else
+              for (final pd in billing.products) _planCard(pd, cs),
+            const SizedBox(height: 12),
+            if (billing.available)
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => billing.restore(),
+                  icon: const Icon(Icons.restore),
+                  label: const Text('Restore my purchase'),
+                ),
+              ),
+            const SizedBox(height: 10),
             Text(
-              license.isPremium
-                  ? '${license.planLabel(license.plan)} \u00b7 ${license.premiumDaysLeft} days left (until ${DateFormat('d MMM yyyy').format(license.premiumExpiryDate)})'
-                  : license.isTrial
-                      ? '${license.trialDaysLeft} days left in your free trial'
-                      : 'Your free trial is over. Subscribe to keep using ProFinance.',
-              style: const TextStyle(color: Colors.white70),
+              'Payment is handled securely by Google Play. Subscriptions renew automatically until cancelled; '
+              'you can cancel anytime in the Play Store. A $kTrialDays-day free trial applies to new users.',
+              style: TextStyle(fontSize: 12, color: cs.outline),
             ),
-          ]),
-        ),
-        const SizedBox(height: 18),
-        Text('Choose a plan', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        for (final p in kPlans)
-          Card(
-            color: selected == p.code ? cs.primaryContainer : null,
-            child: RadioListTile<String>(
-              value: p.code,
-              groupValue: selected,
-              onChanged: (v) => setState(() => selected = v!),
-              title: Text(p.label, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('\$${p.priceUsd}  \u00b7  ${(p.priceUsd / (p.days / 30)).toStringAsFixed(1)}\$/month'),
-              secondary: p.code == '1Y'
-                  ? Chip(label: const Text('Popular'), backgroundColor: cs.tertiaryContainer)
-                  : (p.code == '2Y' ? const Chip(label: Text('Best value')) : null),
-            ),
-          ),
-        const SizedBox(height: 10),
-        // App ID
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.fingerprint),
-            title: const Text('Your App ID'),
-            subtitle: Text(license.appId, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2)),
-            trailing: IconButton(
-              icon: const Icon(Icons.copy),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: license.appId));
-                snack(context, 'App ID copied');
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        FilledButton.icon(
-          onPressed: _emailOwner,
-          icon: const Icon(Icons.email_outlined),
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-          label: Text('I paid \u2014 email my App ID for ${_plan.label}'),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'How it works: pick a plan, send the payment to the owner, then tap the button above to email your App ID. '
-          'You will receive an activation code that only works on this device. Paste it below.',
-          style: TextStyle(fontSize: 12.5, color: cs.outline),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: codeCtl,
-          maxLines: 2,
-          decoration: const InputDecoration(
-            labelText: 'Activation code',
-            hintText: 'Paste the code you received',
-            border: OutlineInputBorder(),
-            prefixIcon: Icon(Icons.vpn_key_outlined),
-          ),
-        ),
-        const SizedBox(height: 10),
-        FilledButton(
-          onPressed: working ? null : _activate,
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-          child: working ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Activate'),
-        ),
-        const SizedBox(height: 40),
-      ],
+            const SizedBox(height: 40),
+          ],
+        );
+      },
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Membership'),
-        automaticallyImplyLeading: !widget.wall,
+      appBar: AppBar(title: const Text('Membership'), automaticallyImplyLeading: !widget.wall),
+      body: widget.wall ? PopScope(canPop: false, child: content) : content,
+    );
+  }
+
+  Widget _planCard(ProductDetails pd, ColorScheme cs) {
+    final plan = kSubProductIds[pd.id] ?? '';
+    final label = license.planLabel(plan);
+    final tag = _tag(plan);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                if (tag.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Chip(
+                    label: Text(tag, style: const TextStyle(fontSize: 11)),
+                    visualDensity: VisualDensity.compact,
+                    backgroundColor: cs.tertiaryContainer,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ],
+              ]),
+              const SizedBox(height: 2),
+              Text(pd.price, style: TextStyle(color: cs.outline)),
+            ]),
+          ),
+          FilledButton(onPressed: () => _buy(pd), child: const Text('Subscribe')),
+        ]),
       ),
-      body: widget.wall ? PopScope(canPop: false, child: body) : body,
     );
   }
 }
 
-/// Owner-only screen to generate activation codes (needs the private seed).
+/// Owner-only screen to generate offline activation codes (for sideloaded
+/// installs / your own testing). Not part of the normal user flow.
 class OwnerSignScreen extends StatefulWidget {
   const OwnerSignScreen({super.key});
   @override
@@ -161,6 +163,7 @@ class OwnerSignScreen extends StatefulWidget {
 class _OwnerSignScreenState extends State<OwnerSignScreen> {
   final seedCtl = TextEditingController();
   final appIdCtl = TextEditingController();
+  final codeCtl = TextEditingController();
   String planCode = '1Y';
   String? result;
 
@@ -170,25 +173,26 @@ class _OwnerSignScreenState extends State<OwnerSignScreen> {
     setState(() => result = code ?? 'Could not sign (check the private seed)');
   }
 
+  Future<void> _redeem() async {
+    final err = await license.activate(codeCtl.text);
+    if (!mounted) return;
+    snack(context, err ?? 'Activated on this device');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Generate license (owner)')),
+      appBar: AppBar(title: const Text('Owner tools')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('Only you can use this. Paste your private seed, the customer\u2019s App ID, pick the plan they paid for, and share the generated code.'),
-          const SizedBox(height: 14),
-          TextField(
-            controller: seedCtl,
-            decoration: const InputDecoration(labelText: 'Private seed (keep secret)', border: OutlineInputBorder()),
-          ),
+          Text('This device\u2019s App ID: ${license.appId}'),
+          const SizedBox(height: 16),
+          const Text('Generate a code', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          TextField(controller: seedCtl, decoration: const InputDecoration(labelText: 'Private seed (keep secret)', border: OutlineInputBorder())),
           const SizedBox(height: 12),
-          TextField(
-            controller: appIdCtl,
-            textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(labelText: 'Customer App ID', border: OutlineInputBorder()),
-          ),
+          TextField(controller: appIdCtl, textCapitalization: TextCapitalization.characters, decoration: const InputDecoration(labelText: 'Customer App ID', border: OutlineInputBorder())),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             value: planCode,
@@ -196,39 +200,23 @@ class _OwnerSignScreenState extends State<OwnerSignScreen> {
             items: [for (final p in kPlans) DropdownMenuItem(value: p.code, child: Text('${p.label} (\$${p.priceUsd})'))],
             onChanged: (v) => setState(() => planCode = v!),
           ),
-          const SizedBox(height: 16),
-          FilledButton(onPressed: _gen, style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)), child: const Text('Generate code')),
+          const SizedBox(height: 14),
+          FilledButton(onPressed: _gen, child: const Text('Generate code')),
           if (result != null) ...[
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Activation code', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  SelectableText(result!),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: result!));
-                        snack(context, 'Code copied');
-                      },
-                      icon: const Icon(Icons.copy),
-                      label: const Text('Copy'),
-                    ),
-                  ),
-                ]),
-              ),
-            ),
+            const SizedBox(height: 12),
+            SelectableText(result!),
           ],
+          const Divider(height: 36),
+          const Text('Redeem a code on this device', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          TextField(controller: codeCtl, maxLines: 2, decoration: const InputDecoration(labelText: 'Activation code', border: OutlineInputBorder())),
+          const SizedBox(height: 10),
+          FilledButton.tonal(onPressed: _redeem, child: const Text('Activate')),
         ],
       ),
     );
   }
 }
-
 
 /// Blocks the app with the subscribe screen once the free trial ends.
 class LicenseGate extends StatelessWidget {

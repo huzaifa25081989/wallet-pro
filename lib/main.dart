@@ -4,6 +4,7 @@ import 'branding.dart';
 import 'cloud.dart';
 import 'lock.dart';
 import 'license.dart';
+import 'billing.dart';
 import 'screens/security.dart';
 import 'screens/subscribe.dart';
 import 'pro.dart';
@@ -40,6 +41,7 @@ class _WalletAppState extends State<WalletApp> {
     await cloud.init(); // optional Firebase cloud backup (safe if offline)
     await lock.load(); // app lock state
     await license.load(); // trial / subscription state
+    await billing.init(); // Google Play Billing (subscriptions)
     await DB.runRecurring(); // post any due recurring payments
   }
 

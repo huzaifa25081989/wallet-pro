@@ -63,7 +63,7 @@ class AboutScreen extends StatelessWidget {
           Text(
             'Every new user gets the full app free for $kTrialDays days \u2014 no limits. After that, keep going with a membership:\n\n'
             '\u2022 1 Month \u2014 \$10\n\u2022 1 Year \u2014 \$30  (best for most people)\n\u2022 2 Years \u2014 \$50  (best value)\n\n'
-            'Open the Membership tab, pick a plan and tap "I paid \u2014 email my App ID". Send the payment, and you\u2019ll get an activation code that unlocks this device. Paste it in and you\u2019re premium.',
+            'Open the Membership tab and pick a plan. Payment is handled securely by Google Play \u2014 just confirm, and ProFinance unlocks instantly. Subscriptions renew automatically and you can cancel anytime from the Play Store.',
             style: TextStyle(height: 1.4, color: Theme.of(context).colorScheme.outline),
           ),
           const SizedBox(height: 14),

@@ -81,6 +81,18 @@ class LicenseController extends ChangeNotifier {
     return code ?? '';
   }
 
+  /// Called by the billing service when a Play subscription is active/restored.
+  Future<void> applyBillingPurchase(String planCode, int expiryEpoch) async {
+    final changed = expiryEpoch > premiumExpiry || plan != planCode;
+    if (!changed) return;
+    plan = planCode;
+    if (expiryEpoch > premiumExpiry) premiumExpiry = expiryEpoch;
+    final p = await SharedPreferences.getInstance();
+    await p.setString('lic_plan', planCode);
+    await p.setInt('lic_expiry', premiumExpiry);
+    notifyListeners();
+  }
+
   /// Activation code format: base64url(payload) + "." + base64url(signature)
   /// payload = "appId|planCode|expiryEpoch"
   Future<String?> activate(String rawCode) async {
